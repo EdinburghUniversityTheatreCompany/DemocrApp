@@ -1,6 +1,6 @@
 [submodule "DemocrApp-UI"]
 	path = DemocrApp-UI
-	url = git@github.com:EdinburghUniversityTheatreCompany/DemocrApp-UI.git
+	url = https://github.com/EdinburghUniversityTheatreCompany/DemocrApp-UI.git
 [submodule "DemocrApp-API"]
 	path = DemocrApp-API
-	url = git@github.com:EdinburghUniversityTheatreCompany/DemocrApp-API.git
+	url = https://github.com/EdinburghUniversityTheatreCompany/DemocrApp-API.git
