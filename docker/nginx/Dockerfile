@@ -7,7 +7,6 @@ RUN yarn build
 
 FROM nginx:latest
 WORKDIR /usr/share/nginx/html
-COPY --from=0 /srv/ui/node_modules node_modules/.
-COPY --from=0 /srv/ui/src src/.
-COPY --from=0 /srv/ui/public public/.
+COPY --from=0 /srv/ui/node_modules ../node_modules/.
+COPY --from=0 /srv/ui/src .
 
