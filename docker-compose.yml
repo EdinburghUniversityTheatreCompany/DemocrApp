@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile:  /docker/django_server/Dockerfile
+    command: bash -c "python manage.py makemigrations Meeting; python manage.py migrate; python manage.py runserver 0.0.0.0:8000;"
     ports:
      - "8000:8000"
     links:
@@ -11,7 +12,10 @@ services:
       - database:database
     environment:
       - DATABASE_PASSWORD
-      - DATABASE_USER=root
+      - DATABASE_USER=django
+    depends_on:
+      - redis
+      - database
     restart: always
   redis:
     image: "redis:alpine"
@@ -25,7 +29,10 @@ services:
     restart: always
   database:
     image: "mysql:latest"
-    envirnoment:
+    environment:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
+      MYSQL_DATABASE: "democrapp"
+      MYSQL_USER: "django"
+      MYSQL_PASSWORD: "${DATABASE_PASSWORD}"
     restart: always
 
