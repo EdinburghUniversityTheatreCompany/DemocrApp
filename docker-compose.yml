@@ -8,11 +8,24 @@ services:
      - "8000:8000"
     links:
       - redis:redis
+      - database:database
+    environment:
+      - DATABASE_PASSWORD
+      - DATABASE_USER=root
+    restart: always
   redis:
     image: "redis:alpine"
+    restart: always
   nginx:
     build:
       context: .
       dockerfile:  /docker/nginx/Dockerfile
     ports: 
      - "80:80"
+    restart: always
+  database:
+    image: "mysql:latest"
+    envirnoment:
+      MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
+    restart: always
+
