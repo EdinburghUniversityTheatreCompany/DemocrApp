@@ -12,6 +12,7 @@ services:
       - database:database
     environment:
       - DATABASE_PASSWORD
+      - SECRET_KEY
       - DATABASE_USER=django
     depends_on:
       - redis
