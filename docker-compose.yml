@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile:  /docker/django_server/Dockerfile
-    command: bash -c "python manage.py makemigrations Meeting; python manage.py migrate; python manage.py runserver 0.0.0.0:8000;"
+    command: bash -c "python manage.py makemigrations Meeting; python manage.py migrate; echo yes | python manage.py collectstatic; python manage.py runserver 0.0.0.0:8000;"
     ports:
      - "8000:8000"
     links:
@@ -18,6 +18,8 @@ services:
       - redis
       - database
     restart: always
+    volumes:
+        - static_volume:/srv/static
   redis:
     image: "redis:alpine"
     restart: always
@@ -25,9 +27,11 @@ services:
     build:
       context: .
       dockerfile:  /docker/nginx/Dockerfile
-    ports: 
+    ports:
      - "80:80"
     restart: always
+    volumes:
+        - static_volume:/srv/api/static
   database:
     image: "mysql:latest"
     environment:
@@ -36,4 +40,5 @@ services:
       MYSQL_USER: "django"
       MYSQL_PASSWORD: "${DATABASE_PASSWORD}"
     restart: always
-
+volumes:
+    static_volume:
