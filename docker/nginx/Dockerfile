@@ -1,8 +1,9 @@
 FROM node:alpine
-ADD DemocrApp-UI/. /srv/ui
-WORKDIR /srv/ui
 RUN npm install yarn
+ADD DemocrApp-UI/package.json /srv/ui/package.json
+WORKDIR /srv/ui
 RUN yarn install
+ADD DemocrApp-UI/. /srv/ui
 RUN yarn build
 
 FROM nginx:latest
