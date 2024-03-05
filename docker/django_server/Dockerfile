@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.8.18
 WORKDIR /srv/api
 ADD DemocrApp-API/requirements.txt /srv/api
 RUN pip install -r requirements.txt

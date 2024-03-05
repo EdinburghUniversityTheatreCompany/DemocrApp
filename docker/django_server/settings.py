@@ -25,7 +25,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['192.168.0.56', 'democrapp.bedlamtheatre.co.uk', 'web']
+ALLOWED_HOSTS = ['192.168.0.56', 'democrapp.bedlamtheatre.co.uk', 'web', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -89,10 +89,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'democrapp',
+        'NAME': os.getenv('DATABASE_NAME'),
         'USER': os.getenv('DATABASE_USER'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': 'database',
+        'PORT': os.getenv('DATABASE_PORT')
     }
 }
 
