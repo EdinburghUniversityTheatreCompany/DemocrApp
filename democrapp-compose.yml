@@ -11,9 +11,11 @@ services:
       - redis:redis
       - database:database
     environment:
-      - DATABASE_PASSWORD
-      - SECRET_KEY
-      - DATABASE_USER=django
+      DATABASE_PASSWORD: "${DATABASE_PASSWORD}"
+      SECRET_KEY: "${SECRET_KEY}"
+      DATABASE_USER: "${DATABASE_USER}"
+      DATABASE_PORT: "${DATABASE_PORT}"
+      DATABASE_NAME: "${DATABASE_NAME}"
     depends_on:
       - redis
       - database
@@ -31,9 +33,11 @@ services:
       - redis:redis
       - database:database
     environment:
-      - DATABASE_PASSWORD
-      - SECRET_KEY
-      - DATABASE_USER=django
+      DATABASE_PASSWORD: "${DATABASE_PASSWORD}"
+      SECRET_KEY: "${SECRET_KEY}"
+      DATABASE_USER: "${DATABASE_USER}"
+      DATABASE_PORT: "${DATABASE_PORT}"
+      DATABASE_NAME: "${DATABASE_NAME}"
     depends_on:
       - web
       - redis
@@ -55,9 +59,10 @@ services:
     image: "mysql:5.7"
     environment:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
-      MYSQL_DATABASE: "democrapp"
-      MYSQL_USER: "django"
+      MYSQL_DATABASE: "${DATABASE_NAME}"
+      MYSQL_USER: "${DATABASE_USER}"
       MYSQL_PASSWORD: "${DATABASE_PASSWORD}"
+      MYSQL_TCP_PORT: "${DATABASE_PORT}"
     restart: always
 volumes:
     static_volume:
