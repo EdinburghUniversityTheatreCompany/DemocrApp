@@ -25,7 +25,7 @@ services:
   websocket:
     build:
       context: .
-      dockerfile:  /docker/django_server/Dockerfile
+      dockerfile:  ./docker/django_server/Dockerfile
     command: bash -c "daphne -b 0.0.0.0 -p 8002 democrapp_api.asgi:application;"
     ports:
      - "8002:8002"
@@ -49,7 +49,7 @@ services:
   nginx:
     build:
       context: .
-      dockerfile:  /docker/nginx/Dockerfile
+      dockerfile:  ./docker/nginx/Dockerfile
     ports:
      - "80:80"
     restart: always
