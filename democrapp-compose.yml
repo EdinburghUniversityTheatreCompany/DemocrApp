@@ -45,7 +45,8 @@ services:
     restart: always
   redis:
     image: "redis:alpine"
-    restart: always
+    volumes:
+        - redis_data:/data
   nginx:
     build:
       context: .
@@ -63,6 +64,10 @@ services:
       MYSQL_USER: "${DATABASE_USER}"
       MYSQL_PASSWORD: "${DATABASE_PASSWORD}"
       MYSQL_TCP_PORT: "${DATABASE_PORT}"
+    volumes:
+      - mysql_data:/var/lib/mysql
     restart: always
 volumes:
+    mysql_data:
     static_volume:
+    redis_data:
