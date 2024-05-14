@@ -1,4 +1,4 @@
-FROM node:14-alpine3.13
+FROM node:20-alpine3.19
 
 ADD DemocrApp-UI/package.json /srv/ui/package.json
 WORKDIR /srv/ui
