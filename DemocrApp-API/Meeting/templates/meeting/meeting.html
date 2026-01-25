@@ -12,6 +12,7 @@
     <thead class="thead-light">
       <tr>
         <th>Name</th>
+        <th>Type</th>
         <th>Status</th>
         <th>Action</th>
         <th>Recieved</th>
@@ -25,6 +26,11 @@
         {% else %}
           <a href="{% url 'meeting/manage_vote' meeting.id vote.id%}">{{vote.name}}</a>
         {% endif %}
+      </td>
+      <td>
+        <span class="badge {% if vote.method == 'STV' %}bg-primary{% else %}bg-info{% endif %}">
+          {{vote.get_method_display}}
+        </span>
       </td>
       <td>{{vote.get_state_display}}</td>
       <td>{% vote_action_button vote %}</td>
