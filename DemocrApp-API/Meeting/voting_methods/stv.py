@@ -6,7 +6,7 @@ from time import sleep
 
 from openstv.ballots import Ballots
 from openstv.MethodPlugins.ScottishSTV import ScottishSTV
-from openstv.ReportPlugins.YamlReport import YamlReport
+from openstv.ReportPlugins.HtmlReport import HtmlReport
 from Meeting.voting_methods.vote_method import VoteMethod
 
 logger = logging.getLogger(__name__)
@@ -70,21 +70,9 @@ class STV(VoteMethod):
         logger.info(electionCounter.winners)
         vote.refresh_from_db()
         vote.state = Vote.CLOSED
-        winners = []
-        losers = []
-        for w in electionCounter.winners:
-            winners.append(ballots.names[w])
-        for l in electionCounter.losers:
-            losers.append(ballots.names[l])
-        vote.results = "Winners: {} \nLosers:{}".format(winners, losers)
-        r = YamlReport(electionCounter)
+        r = HtmlReport(electionCounter)
         r.generateReport()
-        report = "\n"
-        for index, name in enumerate(ballots.names):
-            report += "[{}] -> {}\n".format(index, name)
-
-        report += r.outputText
-        vote.results += report
+        vote.results = r.outputText
         vote.save()
 
     @classmethod

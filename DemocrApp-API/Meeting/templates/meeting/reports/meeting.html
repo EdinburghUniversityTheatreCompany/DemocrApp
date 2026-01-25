@@ -10,6 +10,6 @@
     <br>
     responses: {{ vote.responses }}
     <br>
-    {{ vote.results | linebreaks }}
+    {{ vote.results | safe }}
 {% endfor %}
 
