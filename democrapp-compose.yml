@@ -27,14 +27,14 @@ services:
     develop:
       watch:
         - action: sync
-          path: ./democrapp-API
+          path: ./DemocrApp-API
           target: /srv/api
           ignore:
             - node_modules/
         - action: rebuild
           path: ./docker/django_server/settings.py
         - action: rebuild
-          path: ./democrapp-API/requirements.txt
+          path: ./DemocrApp-API/requirements.txt
   websocket:
     build:
       context: .
@@ -63,14 +63,14 @@ services:
     develop:
       watch:
         - action: sync
-          path: ./democrapp-API
+          path: ./DemocrApp-API
           target: /srv/api
           ignore:
             - node_modules/
         - action: rebuild
           path: ./docker/django_server/settings.py
         - action: rebuild
-          path: ./democrapp-API/requirements.txt
+          path: ./DemocrApp-API/requirements.txt
   redis:
     image: "redis:alpine"
     restart: always  
@@ -94,12 +94,12 @@ services:
     develop:
       watch:
         - action: sync
-          path: ./democrapp-ui
+          path: ./DemocrApp-UI
           target: /usr/share/nginx/html
           ignore:
-            - ./democrapp-ui/node_modules/
+            - ./DemocrApp-UI/node_modules/
         - action: rebuild
-          path: ./democrapp-ui/package.json
+          path: ./DemocrApp-UI/package.json
   database:
     image: "mysql:8.3"
     environment:
