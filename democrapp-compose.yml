@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile:  ./docker/django_server/Dockerfile
-    command: bash -c "python manage.py migrate && echo yes | python manage.py collectstatic && uwsgi --socket 0.0.0.0:8001 --enable-threads --module democrapp_api.wsgi"
+    command: bash -c "python manage.py migrate && echo yes | python manage.py collectstatic && uwsgi --socket 0.0.0.0:8001 --enable-threads --buffer-size=65535 --module democrapp_api.wsgi"
     ports:
      - "8001:8001"
     links:
