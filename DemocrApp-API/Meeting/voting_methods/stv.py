@@ -73,6 +73,17 @@ class STV(VoteMethod):
         r = HtmlReport(electionCounter)
         r.generateReport()
         vote.results = r.outputText
+
+        # Store structured results data
+        winner_names = [names[w] for w in electionCounter.winners]
+        loser_names = [names[l] for l in electionCounter.losers] if hasattr(electionCounter, 'losers') else []
+
+        vote.results_data = {
+            "winners": winner_names,
+            "losers": loser_names,
+            "seats": seats,
+            "num_ballots": ballots.numBallots if hasattr(ballots, 'numBallots') else 0,
+        }
         vote.save()
 
     @classmethod

@@ -71,5 +71,16 @@ class YNA(VoteMethod):
         """.format(y, y_pct, n, n_pct, a, a_pct, total)
 
         vote.results = html_results
+        vote.results_data = {
+            "yes": y,
+            "no": n,
+            "abstain": a,
+            "total": total,
+            "percentages": {
+                "yes": round(y_pct, 1),
+                "no": round(n_pct, 1),
+                "abstain": round(a_pct, 1)
+            }
+        }
         vote.state = Vote.CLOSED
         vote.save()

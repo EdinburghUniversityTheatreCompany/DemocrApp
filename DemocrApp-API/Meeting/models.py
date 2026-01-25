@@ -94,6 +94,7 @@ class Vote(models.Model):
     name = models.TextField(default='')
     description = models.TextField(default='')
     results = models.TextField(default='')
+    results_data = models.JSONField(default=dict, blank=True)
     YES_NO_ABS = "YNA"
     STV = "STV"
     methods = (
