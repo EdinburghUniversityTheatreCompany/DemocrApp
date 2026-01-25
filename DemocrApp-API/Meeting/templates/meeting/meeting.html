@@ -20,8 +20,8 @@
     {% for vote in votes %}
     <tr>
       <td>
-        {% if vote.method == "STV" %}
-          <a href="#" onclick="edit_ballot({{ meeting.id }}, {{ vote.id }}, '{{ vote.name|escapejs }}'); return false;">{{vote.name}}</a>
+        {% if vote.method == "STV" or vote.method == "YNA" %}
+          <a href="{% url 'meeting/manage_vote' meeting.id vote.id%}" class="ballot-modal-link" data-meeting-id="{{ meeting.id }}" data-vote-id="{{ vote.id }}" data-ballot-name="{{ vote.name|escapejs }}">{{vote.name}}</a>
         {% else %}
           <a href="{% url 'meeting/manage_vote' meeting.id vote.id%}">{{vote.name}}</a>
         {% endif %}
@@ -570,5 +570,23 @@
         var modal = new bootstrap.Modal(document.getElementById('ballotErrorModal'));
         modal.show();
     }
+
+    // Click interception for modal links
+    // Normal click: open modal. Ctrl/Shift/Middle/Right-click: open in new tab/fallback page
+    $(document).on('click', 'a.ballot-modal-link', function(e) {
+        // Check if user is trying to open in a new tab/window (Ctrl/Cmd, Shift, Middle-click)
+        // or if right-click context menu is open
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1 || e.button === 2) {
+            // Let browser handle it - will open fallback page in new tab
+            return true;
+        }
+
+        // Normal left-click: prevent default and open modal instead
+        e.preventDefault();
+        var meetingId = $(this).data('meeting-id');
+        var voteId = $(this).data('vote-id');
+        var ballotName = $(this).data('ballot-name');
+        edit_ballot(meetingId, voteId, ballotName);
+    });
 </script>
 {% endblock %}
