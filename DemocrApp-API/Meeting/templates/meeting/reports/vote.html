@@ -1,43 +1,119 @@
-<h1>{{ vote.name }}</h1>
-{{ vote.results | safe }}
-<h2>vote translations</h2>
-<table>
-    <tr>
-        <td>id</td>
-        <td>name</td>
-    </tr>
-    {% for o in options %}
-        <tr>
-            <td>{{ o.pk }}</td>
-            <td>{{ o.name }}</td>
-        </tr>
-    {% endfor %}
-</table>
-<h2>votes</h2>
-<table>
-    <tr>
-        <td>option</td>
-        <td>preference</td>
-    </tr>
-    {% for v in votes %}
-        {% for be in v %}
-            <tr>
-                <td>{{ be.option.pk }}</td>
-                <td>{{ be.value }}</td>
-            </tr>
-        {% endfor %}
-        <tr><td>--------------------------------</td></tr>
-    {% endfor %}
+{% extends "meeting/reports/_base.html" %}
 
-    <tr><td>----------Begin Proxies-------------</td></tr>
-    {% for v in proxy_votes %}
-        {% for be in v %}
-            <tr>
-                <td>{{ be.option.pk }}</td>
-                <td>{{ be.value }}</td>
-            </tr>
-        {% endfor %}
-        <tr><td>--------------------------</td></tr>
-    {% endfor %}
-</table>
+{% block title %}{{ vote.name }} - Vote Report{% endblock %}
 
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3 no-print">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'meeting/report/meeting' vote.token_set.meeting.id %}">{{ vote.token_set.meeting.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ vote.name }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">{{ vote.name }}</h1>
+        <p class="text-muted mb-0">
+            <span class="badge bg-secondary">{{ vote.get_method_display }}</span>
+            <span class="badge bg-info">{{ vote.responses }} responses</span>
+        </p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-bar-chart"></i> Results</h5>
+    </div>
+    <div class="card-body">
+        {{ vote.results | safe }}
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-list"></i> Option Reference</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Option Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in options %}
+                <tr>
+                    <td><code>{{ o.pk }}</code></td>
+                    <td>{{ o.name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-users"></i> Individual Ballots</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Option ID</th>
+                    <th>Preference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in votes %}
+                    {% for be in v %}
+                    <tr>
+                        <td><code>{{ be.option.pk }}</code></td>
+                        <td>{{ be.value }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-secondary">
+                        <td colspan="2" class="text-center text-muted small">--- End of ballot ---</td>
+                    </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="text-muted">No ballots recorded.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if proxy_votes %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="fa fa-user-secret"></i> Proxy Ballots</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Option ID</th>
+                    <th>Preference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in proxy_votes %}
+                    {% for be in v %}
+                    <tr>
+                        <td><code>{{ be.option.pk }}</code></td>
+                        <td>{{ be.value }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-secondary">
+                        <td colspan="2" class="text-center text-muted small">--- End of proxy ballot ---</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,15 +1,65 @@
-<h1>{{ meeting.name }}</h1>
-<ol>
-    {% for t_set in token_sets %}
-        <li>{{ t_set.created_at }}</li>
-    {% endfor %}
-</ol>
+{% extends "meeting/reports/_base.html" %}
+
+{% block title %}{{ meeting.name }} Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">{{ meeting.name }}</h1>
+        <p class="text-muted mb-0">
+            <i class="fa fa-calendar"></i> {{ meeting.time|date:"F j, Y, g:i a" }}
+            {% if meeting.close_time %}
+                - {{ meeting.close_time|date:"g:i a" }}
+            {% endif %}
+        </p>
+    </div>
+    <div class="no-print">
+        <div class="btn-group">
+            <a href="{% url 'meeting/report/meeting/json' meeting.id %}" class="btn btn-outline-primary btn-sm">
+                <i class="fa fa-download"></i> JSON
+            </a>
+            <a href="{% url 'meeting/report/meeting/yaml' meeting.id %}" class="btn btn-outline-primary btn-sm">
+                <i class="fa fa-download"></i> YAML
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if token_sets %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-key"></i> Token Sets</h5>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for t_set in token_sets %}
+        <li class="list-group-item">{{ t_set.created_at|date:"F j, Y, g:i a" }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<h2 class="mb-3"><i class="fa fa-check-square-o"></i> Votes</h2>
 
 {% for vote in votes %}
-    <h2><a href="{% url 'meeting/report/vote' meeting.id vote.id %}">{{ vote.name }}</a></h2>
-    <br>
-    responses: {{ vote.responses }}
-    <br>
-    {{ vote.results | safe }}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <a href="{% url 'meeting/report/vote' meeting.id vote.id %}" class="text-decoration-none">
+                {{ vote.name }}
+            </a>
+        </h5>
+        <div>
+            <span class="badge bg-secondary">{{ vote.get_method_display }}</span>
+            <span class="badge bg-info">{{ vote.responses }} responses</span>
+        </div>
+    </div>
+    <div class="card-body">
+        {{ vote.results | safe }}
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+    <i class="fa fa-info-circle"></i> No votes recorded for this meeting.
+</div>
 {% endfor %}
-
+{% endblock %}
