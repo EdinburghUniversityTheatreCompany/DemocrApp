@@ -61,7 +61,8 @@
     $(document).ready(() => {
       var t = $.urlParam('t');
       var m = $.urlParam('m');
-      $('#tokenfield').html(t);
+      const formattedToken = t.substring(0, 4) + ' ' + t.substring(4);
+      $('#tokenfield').html(formattedToken);
       $('#qr-code').attr("qr-data", "https://democrapp.bedlamtheatre.co.uk/?t=" + t + "&m=" + m);
       $('#heading').html($.urlParam('h'));
       $('#desc').html($.urlParam('d'));
