@@ -8,7 +8,7 @@ from django.utils import timezone
 import urllib.parse
 
 from Meeting.form import VoteForm
-from ..models import Meeting, Vote, AuthToken
+from ..models import Meeting, Vote, AuthToken, Option
 
 
 @login_required(login_url='/api/admin/login')
@@ -109,3 +109,26 @@ def deactivate_token(request, meeting_id):
             return JsonResponse({'result': 'failure',
                                  'reason': 'token is for a different meeting'})
     return JsonResponse({"result": "failure", "reason": "this endpoint requires POST as it changes state"})
+
+
+@login_required(login_url='/api/admin/login')
+@permission_required('Meeting.add_meeting', raise_exception=True)
+def get_ballot_candidates(request, meeting_id, vote_id):
+    """Get ballot candidates as JSON for modal interface."""
+    meeting = get_object_or_404(Meeting, pk=meeting_id)
+    vote = get_object_or_404(Vote, pk=vote_id)
+
+    if vote.token_set.meeting != meeting:
+        return JsonResponse({"result": "failure"}, status=403)
+
+    candidates = Option.objects.filter(vote=vote).values('id', 'name')
+    candidates_list = list(candidates)
+
+    return JsonResponse({
+        "ballot_id": vote.id,
+        "ballot_name": vote.name,
+        "state": vote.state,
+        "method": vote.method,
+        "candidates": candidates_list,
+        "results": vote.results
+    })

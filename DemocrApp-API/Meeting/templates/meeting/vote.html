@@ -23,59 +23,20 @@
 {% endblock %}
 
 {% block footerscripts %}
+    <script src="/static/js/ballot-management.js"></script>
     <script>
-        var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
-
-        function csrfSafeMethod(method) {
-            // these HTTP methods do not require CSRF protection
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        }
-
         function add_option() {
             var new_option = $('#additional_option_textbox').val();
-            $.ajaxSetup({
-                beforeSend: function (xhr, settings) {
-                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    }
-                }
+            add_candidate_ajax(new_option, {{ meeting.id }}, {{ vote.id }}, function(data) {
+                $('#option_list').append("<li id='" + data.id + "'>" + new_option + "<button class='btn btn-sm btn-danger' type='button' onclick='remove_option(" + data.id + ")'>remove</button></li>");
+                $('#additional_option_textbox').val('');
             });
-            $.ajax({
-                type: 'POST',
-                url: '{% url 'meeting/add_vote_option' meeting.id vote.id %}',
-                data: {
-                    'name': new_option
-                },
-                dataType: 'json',
-                success: function (data) {
-                    if (data.result == "success") {
-                        $('#option_list').append("<li id='" + data.id + "'>" + new_option + "<button class='btn btn-sm btn-danger' type='button' onclick='remove_option(" + data.id + ")'>remove</button></li>")
-                    }
-                }
-            });
-        };
+        }
 
         function remove_option(target) {
-            $.ajaxSetup({
-                beforeSend: function (xhr, settings) {
-                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    }
-                }
+            remove_candidate_ajax(target, {{ meeting.id }}, {{ vote.id }}, function(data) {
+                $('#' + target).remove();
             });
-            $.ajax({
-                type: 'POST',
-                url: '{% url 'meeting/remove_vote_option' meeting.id vote.id %}',
-                data: {
-                    'id': target
-                },
-                dataType: 'json',
-                success: function (data) {
-                    if (data.result == "success") {
-                        $('#' + target).remove()
-                    }
-                }
-            });
-        };
+        }
     </script>
 {% endblock %}

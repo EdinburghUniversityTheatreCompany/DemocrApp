@@ -23,5 +23,11 @@ def remove_option(request, meeting_id, vote_id):
     vote = get_object_or_404(Vote, pk=vote_id)
     if vote.token_set.meeting != meeting or vote.state != Vote.READY or vote.method == Vote.YES_NO_ABS:
         return JsonResponse({"result": "failure"})
-    Option.objects.filter(pk=request.POST['id'], vote=vote).delete()
+
+    # Prevent deletion of "None of the above" option
+    option = get_object_or_404(Option, pk=request.POST['id'], vote=vote)
+    if option.name == "None of the above":
+        return JsonResponse({"result": "failure", "reason": "cannot_remove_none_of_the_above"})
+
+    option.delete()
     return JsonResponse({"result": "success"})

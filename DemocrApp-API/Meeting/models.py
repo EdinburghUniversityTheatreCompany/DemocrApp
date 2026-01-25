@@ -4,6 +4,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.utils import timezone
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.urls import reverse
 import uuid
 import random
@@ -172,3 +174,13 @@ class BallotEntry(models.Model):
 class Tie(models.Model):
     vote = models.ForeignKey(Vote, on_delete=models.CASCADE)
     option = models.ForeignKey(Option, on_delete=models.CASCADE)
+
+
+@receiver(post_save, sender=Vote)
+def auto_create_none_of_the_above(sender, instance, created, **kwargs):
+    """Auto-create 'None of the above' option for STV ballots when created."""
+    if created and instance.method == Vote.STV:
+        Option.objects.get_or_create(
+            vote=instance,
+            name="None of the above"
+        )

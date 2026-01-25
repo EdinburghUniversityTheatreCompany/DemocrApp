@@ -57,7 +57,9 @@ class ManagementInterfaceCases(BaseTestCase):
         self.assertEqual(v.method, Vote.STV)
         self.assertEqual(v.state, Vote.READY)
         self.assertEqual(v.token_set, self.ts)
-        self.assertEqual(v.option_set.count(), 0)
+        # STV votes should auto-create "None of the above" option
+        self.assertEqual(v.option_set.count(), 1)
+        self.assertEqual(v.option_set.first().name, "None of the above")
 
     def test_add_vote_option_YNA(self):
         v = Vote(name='name', token_set=self.ts, method=Vote.YES_NO_ABS)
@@ -83,12 +85,15 @@ class ManagementInterfaceCases(BaseTestCase):
     def test_add_vote_option_predicted_success(self):
         v = Vote(name='name', token_set=self.ts, method=Vote.STV)
         v.save()
+        # v.option_set.count() is now 1 (None of the above)
         request_args = [reverse('meeting/add_vote_option', args=[self.m.id, v.id]),
                         {'name': 'name'}]
         result = self.client.post(*request_args)
+        # Find the newly added option (not "None of the above")
+        new_option = v.option_set.get(name='name')
         self.assertJSONEqual(result.content, json.dumps({'result': 'success',
-                                                         'id': v.option_set.first().id}))
-        self.assertEqual(1, v.option_set.count())
+                                                         'id': new_option.id}))
+        self.assertEqual(2, v.option_set.count())
 
     def test_remove_vote_option_YNA(self):
         v = Vote(name='name', token_set=self.ts, method=Vote.YES_NO_ABS)
@@ -116,13 +121,34 @@ class ManagementInterfaceCases(BaseTestCase):
     def test_remove_vote_option_predicted_success(self):
         v = Vote(name='name', token_set=self.ts, method=Vote.STV)
         v.save()
-        Option(name='name', vote=v).save()
-        self.assertEqual(1, v.option_set.count())
+        # v.option_set.count() is now 1 (None of the above)
+        custom_option = Option(name='custom_name', vote=v)
+        custom_option.save()
+        self.assertEqual(2, v.option_set.count())
         request_args = [reverse('meeting/remove_vote_option', args=[self.m.id, v.id]),
-                        {'id': v.option_set.first().id}]
+                        {'id': custom_option.id}]
         result = self.client.post(*request_args)
         self.assertJSONEqual(result.content, json.dumps({'result': 'success'}))
-        self.assertEqual(0, v.option_set.count())
+        self.assertEqual(1, v.option_set.count())
+        # Verify "None of the above" still exists
+        self.assertEqual(v.option_set.first().name, "None of the above")
+
+    def test_cannot_remove_none_of_the_above(self):
+        """Test that 'None of the above' option cannot be removed."""
+        v = Vote(name='name', token_set=self.ts, method=Vote.STV)
+        v.save()
+        # Get the "None of the above" option
+        none_of_above = v.option_set.get(name="None of the above")
+        self.assertEqual(1, v.option_set.count())
+
+        request_args = [reverse('meeting/remove_vote_option', args=[self.m.id, v.id]),
+                        {'id': none_of_above.id}]
+        result = self.client.post(*request_args)
+        self.assertJSONEqual(result.content, json.dumps({'result': 'failure',
+                                                         'reason': 'cannot_remove_none_of_the_above'}))
+        self.assertEqual(1, v.option_set.count())
+        # Verify option still exists
+        self.assertTrue(v.option_set.filter(name="None of the above").exists())
 
     def test_open_vote(self):
         v = Vote(name='name', token_set=self.ts, method=Vote.STV)
@@ -131,9 +157,9 @@ class ManagementInterfaceCases(BaseTestCase):
         for x in range(0, 2):
             result = self.client.get(request_url)
             v.refresh_from_db()
-            self.assertJSONEqual(result.content, json.dumps({'reason:': 'insufficient_options',
+            self.assertJSONEqual(result.content, json.dumps({'reason': 'insufficient_options',
                                                              'result': 'failure',
-                                                             'verbose_reason': 'an stv vote needs at least 2 options'}))
+                                                             'message': 'This ballot needs at least 2 candidates to open. Please add more candidates and try again.'}))
             self.assertEqual(v.state, v.READY)
             o = Option(name=str(x), vote=v)
             o.save()
@@ -251,6 +277,29 @@ class ManagementInterfaceCases(BaseTestCase):
         request_args = [reverse('meeting/list')]
         result = self.client.get(*request_args)
         self.assertJSONEqual(result.content, json.dumps({'meetings': []}))
+
+    def test_get_ballot_candidates(self):
+        """Test the new JSON endpoint for getting ballot candidates."""
+        v = Vote(name='Test Ballot', token_set=self.ts, method=Vote.STV)
+        v.save()
+        # v should have "None of the above" auto-created
+        Option(name='Candidate 1', vote=v).save()
+        Option(name='Candidate 2', vote=v).save()
+
+        request_url = reverse('meeting/get_ballot_candidates', args=[self.m.id, v.id])
+        result = self.client.get(request_url)
+        data = json.loads(result.content)
+
+        self.assertEqual(data['ballot_id'], v.id)
+        self.assertEqual(data['ballot_name'], 'Test Ballot')
+        self.assertEqual(data['state'], Vote.READY)
+        self.assertEqual(data['method'], Vote.STV)
+        self.assertEqual(len(data['candidates']), 3)
+        # Check that candidates include "None of the above"
+        candidate_names = [c['name'] for c in data['candidates']]
+        self.assertIn('None of the above', candidate_names)
+        self.assertIn('Candidate 1', candidate_names)
+        self.assertIn('Candidate 2', candidate_names)
 
     def test_meeting_management(self):
         request_args = [reverse('meeting/manage', args=[self.m.pk])]

@@ -19,13 +19,87 @@
     </thead>
     {% for vote in votes %}
     <tr>
-      <td><a href="{% url 'meeting/manage_vote' meeting.id vote.id%}">{{vote.name}}</a></td>
+      <td>
+        {% if vote.method == "STV" %}
+          <a href="#" onclick="edit_ballot({{ meeting.id }}, {{ vote.id }}, '{{ vote.name|escapejs }}'); return false;">{{vote.name}}</a>
+        {% else %}
+          <a href="{% url 'meeting/manage_vote' meeting.id vote.id%}">{{vote.name}}</a>
+        {% endif %}
+      </td>
       <td>{{vote.get_state_display}}</td>
       <td>{% vote_action_button vote %}</td>
       <td>{% vote_responses_or_remove vote csrf_token %}</td>
     </tr>
     {% endfor %}
   </table>
+</div>
+
+<!-- Candidate Management Modal -->
+<div class="modal fade" id="editCandidatesModal" tabindex="-1" role="dialog" aria-labelledby="editCandidatesModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editCandidatesModalLabel">Edit Candidates</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="ballotInfo">
+          <h6 id="ballotName"></h6>
+          <p id="ballotState" class="text-muted"></p>
+        </div>
+
+        <h6>Current Candidates</h6>
+        <ul id="candidatesList" class="list-group mb-3"></ul>
+
+        <h6>Add New Candidate</h6>
+        <div class="input-group">
+          <input type="text" class="form-control" id="newCandidateName" placeholder="Candidate name" maxlength="100">
+          <button class="btn btn-primary" type="button" id="addCandidateBtn" onclick="add_candidate()">Add</button>
+        </div>
+        <div id="candidateError" class="alert alert-danger mt-2" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal for Closed Votes -->
+<div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reportModalLabel"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="reportContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Error Modal for Ballot Opening -->
+<div class="modal fade" id="ballotErrorModal" tabindex="-1" role="dialog" aria-labelledby="ballotErrorModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ballotErrorModalLabel">Cannot Open Ballot</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="ballotErrorMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="edit_ballot_from_error()">Edit Candidates</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="card">
@@ -262,6 +336,239 @@
             e.preventDefault();
             return false;
         }
+    }
+
+    // Modal interaction functions
+    var currentMeetingId = {{ meeting.id }};
+    var currentBallotId = null;
+
+    function edit_ballot(meeting_id, ballot_id, ballot_name) {
+        currentBallotId = ballot_id;
+        fetch('/api/manage/' + meeting_id + '/' + ballot_id + '/candidates.json')
+            .then(response => response.json())
+            .then(data => {
+                // Check vote state to determine which modal to show
+                if (data.state === 'CL') {  // CLOSED state
+                    show_report_modal(ballot_name, data);
+                } else if (data.state === 'RE') {  // READY state
+                    show_edit_modal(ballot_name, data);
+                } else {
+                    // For other states (LIVE, COUNTING, NEEDS_TIE_BREAKER), show view-only
+                    show_view_only_modal(ballot_name, data);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching candidates:', error);
+                alert('Error loading candidates');
+            });
+    }
+
+    function show_edit_modal(ballot_name, data) {
+        $('#ballotName').text(ballot_name + ' (' + data.candidates.length + ' candidates)');
+        $('#ballotState').text('Status: ' + data.state);
+        render_candidates(data.candidates);
+        $('#candidateError').hide();
+        $('#newCandidateName').val('');
+        // Enable inputs for editing
+        $('#addCandidateBtn').prop('disabled', false);
+        $('#newCandidateName').prop('disabled', false);
+        var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
+        modal.show();
+    }
+
+    function show_report_modal(ballot_name, data) {
+        $('#reportModalLabel').text(ballot_name + ' - Results');
+        var reportContent = data.results;
+        if (!reportContent || reportContent.trim() === '') {
+            reportContent = '<p class="text-muted">No results available yet.</p>';
+        }
+        $('#reportContent').html(reportContent);
+        var modal = new bootstrap.Modal(document.getElementById('reportModal'));
+        modal.show();
+    }
+
+    function show_view_only_modal(ballot_name, data) {
+        $('#ballotName').text(ballot_name + ' (' + data.candidates.length + ' candidates)');
+        $('#ballotState').text('Status: ' + data.state);
+        render_candidates(data.candidates);
+        $('#candidateError').hide();
+        $('#newCandidateName').val('');
+        // Disable the add button and input for view-only mode
+        $('#addCandidateBtn').prop('disabled', true);
+        $('#newCandidateName').prop('disabled', true);
+        var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
+        modal.show();
+    }
+
+    function render_candidates(candidates) {
+        var list = $('#candidatesList');
+        list.empty();
+        candidates.forEach(function(candidate) {
+            var isNoneOfTheAbove = candidate.name === 'None of the above';
+            var removeBtn = isNoneOfTheAbove
+                ? '<span class="badge bg-secondary ms-2">Required</span>'
+                : '<button class="btn btn-sm btn-danger ms-2" onclick="remove_candidate(' + candidate.id + ')">Remove</button>';
+            var listItem = '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+                           candidate.name + removeBtn + '</li>';
+            list.append(listItem);
+        });
+    }
+
+    function add_candidate() {
+        var name = $('#newCandidateName').val().trim();
+        if (!name) {
+            show_error('Please enter a candidate name');
+            return;
+        }
+
+        // Check for duplicates
+        var isDuplicate = $('#candidatesList li').toArray().some(function(li) {
+            return $(li).text().trim().split('\n')[0] === name;
+        });
+        if (isDuplicate) {
+            show_error('This candidate name already exists');
+            return;
+        }
+
+        // Check candidate limit (max 8, including "None of the above")
+        var candidateCount = $('#candidatesList li').length;
+        if (candidateCount >= 8) {
+            show_error('Maximum 8 candidates allowed (including "None of the above")');
+            return;
+        }
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+
+        $.ajax({
+            type: 'POST',
+            url: '/api/manage/' + currentMeetingId + '/' + currentBallotId + '/add_option',
+            data: { name: name },
+            dataType: 'json',
+            success: function(data) {
+                if (data.result === 'success') {
+                    $('#newCandidateName').val('');
+                    $('#candidateError').hide();
+                    fetch_and_render_candidates();
+                } else {
+                    show_error('Failed to add candidate');
+                }
+            },
+            error: function(textStatus) {
+                console.error('Error adding candidate:', textStatus);
+                show_error('Error adding candidate');
+            }
+        });
+    }
+
+    function remove_candidate(candidate_id) {
+        if (confirm('Remove this candidate?')) {
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+
+            $.ajax({
+                type: 'POST',
+                url: '/api/manage/' + currentMeetingId + '/' + currentBallotId + '/remove_option',
+                data: { id: candidate_id },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.result === 'success') {
+                        fetch_and_render_candidates();
+                    } else if (data.reason === 'cannot_remove_none_of_the_above') {
+                        show_error('Cannot remove "None of the above" option');
+                    } else {
+                        show_error('Failed to remove candidate');
+                    }
+                },
+                error: function(textStatus) {
+                    console.error('Error removing candidate:', textStatus);
+                    show_error('Error removing candidate');
+                }
+            });
+        }
+    }
+
+    function fetch_and_render_candidates() {
+        fetch('/api/manage/' + currentMeetingId + '/' + currentBallotId + '/candidates.json')
+            .then(response => response.json())
+            .then(data => {
+                render_candidates(data.candidates);
+                $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
+            })
+            .catch(error => {
+                console.error('Error fetching candidates:', error);
+                show_error('Error updating candidates');
+            });
+    }
+
+    function show_error(message) {
+        $('#candidateError').text(message).show();
+    }
+
+    function edit_ballot_from_error() {
+        // Close the error modal and open the candidates modal
+        bootstrap.Modal.getInstance(document.getElementById('ballotErrorModal')).hide();
+        edit_ballot(currentMeetingId, currentBallotId, '');
+    }
+
+    // Override open_vote to handle errors gracefully
+    function open_ballot_with_error_handling(meeting_id, ballot_id) {
+        window.location.href = '/api/manage/' + meeting_id + '/' + ballot_id + '/open_vote';
+    }
+
+    // Intercept "Open Vote" button clicks for STV ballots
+    $(document).on('click', 'a.btn-success[href*="/open_vote"]', function(e) {
+        var href = $(this).attr('href');
+        var match = href.match(/\/manage\/(\d+)\/(\d+)\/open_vote/);
+        if (match) {
+            var meeting_id = match[1];
+            var ballot_id = match[2];
+            e.preventDefault();
+            attempt_open_ballot(meeting_id, ballot_id);
+        }
+    });
+
+    function attempt_open_ballot(meeting_id, ballot_id) {
+        $.ajax({
+            type: 'GET',
+            url: '/api/manage/' + meeting_id + '/' + ballot_id + '/candidates.json',
+            dataType: 'json',
+            success: function(data) {
+                // Check if ballot has at least 2 candidates (excluding just "None of the above")
+                if (data.candidates.length < 2) {
+                    show_ballot_error(
+                        'This ballot needs at least 2 candidates. Currently has ' + data.candidates.length + '.',
+                        meeting_id,
+                        ballot_id
+                    );
+                    return;
+                }
+                // All good, proceed with opening
+                window.location.href = '/api/manage/' + meeting_id + '/' + ballot_id + '/open_vote';
+            },
+            error: function(textStatus) {
+                console.error('Error checking ballot:', textStatus);
+                show_ballot_error('Error checking ballot status', meeting_id, ballot_id);
+            }
+        });
+    }
+
+    function show_ballot_error(message, meeting_id, ballot_id) {
+        currentMeetingId = meeting_id;
+        currentBallotId = ballot_id;
+        $('#ballotErrorMessage').text(message);
+        var modal = new bootstrap.Modal(document.getElementById('ballotErrorModal'));
+        modal.show();
     }
 </script>
 {% endblock %}

@@ -16,9 +16,11 @@ def open_vote(request, meeting_id, vote_id):
     if vote.token_set.meeting != meeting or vote.state != vote.READY:
         return JsonResponse({'result': 'failure'}, status=401)
     if vote.option_set.count() < 2:
-        return JsonResponse({'result': 'failure',
-                             'reason:': 'insufficient_options',
-                             'verbose_reason': 'an stv vote needs at least 2 options'})
+        return JsonResponse({
+            'result': 'failure',
+            'reason': 'insufficient_options',
+            'message': 'This ballot needs at least 2 candidates to open. Please add more candidates and try again.'
+        })
 
     vote.state = vote.LIVE
     vote.token_set = meeting.tokenset_set.latest()
