@@ -1,0 +1,16 @@
+<div id="{{id}}" class="card message mb-3">
+  <div class="card-header">
+    <h5 class="card-title"><i class="i-main fa fa-bullhorn"></i> Announcement</h5>
+  </div>
+  <div class="card-body">
+    <p class="card-text">
+      {{message}}
+    </p>
+    <div class="active-body">
+      <button type="button" onClick="dismissElement('{{id}}')" class="btn btn-outline-dark">Dismiss</button>
+    </div>
+  </div>
+  <div class="card-footer text-muted small">
+    This message was sent by the event organisers.
+  </div>
+</div>

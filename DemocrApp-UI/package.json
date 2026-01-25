@@ -1,0 +1,11 @@
+{
+  "name": "democrapp-ui",
+  "version": "0.0.3",
+  "description": "Client for DemocrApp",
+  "repository": "git@github.com:EdinburghUniversityTheatreCompany/DemocrApp-UI.git",
+  "author": "rphi <8237136+rphi@users.noreply.github.com>",
+  "license": "UNLICENCED",
+  "private": true,
+  "dependencies": {
+  }
+}
