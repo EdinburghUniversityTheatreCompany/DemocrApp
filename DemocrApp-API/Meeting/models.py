@@ -33,7 +33,9 @@ class Meeting(models.Model):
         return "{} \t-\t {}".format(self.time.date(), self.name)
 
     def get_absolute_url(self):
-        return reverse('meeting/manage', args=[self.pk])
+        if self.open():
+            return reverse('meeting/manage', args=[self.pk])
+        return reverse('meeting/report/meeting', args=[self.pk])
 
     def channel_group_name(self):
         return "meeting_{}".format(self.pk)
