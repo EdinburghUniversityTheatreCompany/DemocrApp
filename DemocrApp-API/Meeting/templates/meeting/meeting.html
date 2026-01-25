@@ -366,12 +366,24 @@
     function show_edit_modal(ballot_name, data) {
         $('#ballotName').text(ballot_name + ' (' + data.candidates.length + ' candidates)');
         $('#ballotState').text('Status: ' + data.state);
-        render_candidates(data.candidates);
+        render_candidates(data.candidates, data.method);
         $('#candidateError').hide();
         $('#newCandidateName').val('');
-        // Enable inputs for editing
-        $('#addCandidateBtn').prop('disabled', false);
-        $('#newCandidateName').prop('disabled', false);
+
+        // For YES_NO_ABS votes, hide the add form since options are fixed
+        if (data.method === 'YNA') {
+            $('#candidateError').text('These options are fixed for Yes/No/Abstain votes.').show();
+            $('#addCandidateBtn').prop('disabled', true);
+            $('#newCandidateName').prop('disabled', true);
+            $('#newCandidateName').hide();
+            $('#addCandidateBtn').hide();
+        } else {
+            // For STV votes, enable inputs for editing
+            $('#addCandidateBtn').prop('disabled', false);
+            $('#newCandidateName').prop('disabled', false);
+            $('#newCandidateName').show();
+            $('#addCandidateBtn').show();
+        }
         var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
         modal.show();
     }
@@ -390,24 +402,37 @@
     function show_view_only_modal(ballot_name, data) {
         $('#ballotName').text(ballot_name + ' (' + data.candidates.length + ' candidates)');
         $('#ballotState').text('Status: ' + data.state);
-        render_candidates(data.candidates);
+        render_candidates(data.candidates, data.method);
         $('#candidateError').hide();
         $('#newCandidateName').val('');
         // Disable the add button and input for view-only mode
         $('#addCandidateBtn').prop('disabled', true);
         $('#newCandidateName').prop('disabled', true);
+        $('#newCandidateName').hide();
+        $('#addCandidateBtn').hide();
         var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
         modal.show();
     }
 
-    function render_candidates(candidates) {
+    function render_candidates(candidates, method) {
         var list = $('#candidatesList');
         list.empty();
         candidates.forEach(function(candidate) {
             var isNoneOfTheAbove = candidate.name === 'None of the above';
-            var removeBtn = isNoneOfTheAbove
-                ? '<span class="badge bg-secondary ms-2">Required</span>'
-                : '<button class="btn btn-sm btn-danger ms-2" onclick="remove_candidate(' + candidate.id + ')">Remove</button>';
+            var isYNA = method === 'YNA';
+
+            var removeBtn;
+            if (isYNA) {
+                // For Yes/No/Abstain votes, all options are fixed
+                removeBtn = '<span class="badge bg-secondary ms-2">Fixed</span>';
+            } else if (isNoneOfTheAbove) {
+                // For STV, "None of the above" is required
+                removeBtn = '<span class="badge bg-secondary ms-2">Required</span>';
+            } else {
+                // For STV, other candidates can be removed
+                removeBtn = '<button class="btn btn-sm btn-danger ms-2" onclick="remove_candidate(' + candidate.id + ')">Remove</button>';
+            }
+
             var listItem = '<li class="list-group-item d-flex justify-content-between align-items-center">' +
                            candidate.name + removeBtn + '</li>';
             list.append(listItem);
@@ -502,7 +527,7 @@
         fetch('/api/manage/' + currentMeetingId + '/' + currentBallotId + '/candidates.json')
             .then(response => response.json())
             .then(data => {
-                render_candidates(data.candidates);
+                render_candidates(data.candidates, data.method);
                 $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
             })
             .catch(error => {
