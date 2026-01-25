@@ -4,10 +4,14 @@ body {
   background-size: initial; }
 
 .header {
-  text-align: center; }
+  display: flex;
+  justify-content: center;
+  align-items: center; }
 
 #logo {
-  width: 17vh;
+  width: 50vh;
+  max-width: 100%;
+  height: auto;
   margin: 2vw; }
 
 #root {
