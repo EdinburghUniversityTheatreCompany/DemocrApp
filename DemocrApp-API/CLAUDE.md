@@ -1,12 +1,26 @@
 # DemocrApp API - Testing Guide
 
+## Recent Updates (January 2026)
+
+**Major Version Upgrades:**
+- Python: 3.12 → **3.14.2**
+- Django: 5.0.4 → **6.0.1**
+- pytest: 8.2.0 → **9.0.2**
+- pytest-asyncio: 0.23.6 → **1.3.0**
+- channels: 4.1.0 → **4.3.2**
+- All other dependencies updated to latest versions
+
+**Breaking Changes Addressed:**
+- Django 6.0: Updated `format_html()` usage in template tags to require args/kwargs
+- pytest-asyncio: Added `asyncio_mode = auto` configuration for mixed sync/async tests
+
 ## Environment Setup
 
-This project uses Python 3.12 with a virtual environment for testing.
+This project uses Python 3.14 with a virtual environment for testing.
 
 ### Prerequisites
 
-- Python 3.12 (managed via mise)
+- Python 3.14 (managed via mise - configured in `.mise.toml`)
 - MySQL 8 (mysql8 Docker container)
 - Redis (for WebSocket tests)
 
@@ -93,7 +107,10 @@ Configuration is in `pytest.ini`:
 ```ini
 [pytest]
 DJANGO_SETTINGS_MODULE = democrapp_api.settings
+asyncio_mode = auto
 ```
+
+**Note:** `asyncio_mode = auto` is required for pytest-asyncio 1.3.0+ to support mixed sync/async test classes.
 
 ## Common Issues
 
@@ -114,7 +131,14 @@ docker exec mysql8 mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'django'@'%'
 
 ### WebSocket tests failing
 
-WebSocket tests require a Redis connection at `localhost:6379`. Ensure the Redis Docker container is running:
+WebSocket tests currently have known issues with channel layer mocking - they try to connect to real Redis and timeout. This is a pre-existing issue not related to the Python/Django upgrade.
+
+**Current status:**
+- 5/9 WebSocket async tests fail with database lock timeouts or async context errors
+- Issue: Tests need proper channel layer mocking instead of real Redis connections
+- Workaround: Run non-WebSocket tests separately with `./run_tests.sh Meeting/test_views.py`
+
+Ensure Redis is running for other functionality:
 ```bash
 docker ps | grep redis
 ```
