@@ -122,6 +122,35 @@ class Vote(models.Model):
     )
     state = models.CharField(max_length=2, default=READY, choices=states)
 
+    majority_threshold = models.CharField(
+        max_length=20,
+        choices=[
+            ('simple', 'Simple Majority'),
+            ('two_thirds', 'Two-Thirds Majority'),
+        ],
+        null=True,
+        blank=True,
+        help_text="For YNA votes: threshold to determine pass/fail"
+    )
+
+    num_seats = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="For STV votes: number of seats to elect"
+    )
+
+    public_id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        help_text="Public identifier for shareable reports"
+    )
+
+    hide_from_public_report = models.BooleanField(
+        default=False,
+        help_text="Hide this vote from public meeting reports"
+    )
+
     def responses(self, exclude_proxies=False):
         if exclude_proxies:
             return BallotEntry.objects.filter(option__vote=self, token__proxy=False).values('token').distinct().count()
@@ -140,10 +169,16 @@ class Vote(models.Model):
     def __str__(self):
         return self.name
 
-    def close(self, num_seats):
+    def close(self):
+        # Validation
+        if self.method == self.STV and not self.num_seats:
+            raise ValueError("STV votes require num_seats to be set before closing")
+        if self.method == self.YES_NO_ABS and not self.majority_threshold:
+            raise ValueError("YNA votes require majority_threshold to be set before closing")
+
         self.state = self.COUNTING
         self.save()
-        self.method_classes.get(self.method).count(self.id, num_seats=num_seats)
+        self.method_classes.get(self.method).count(self.id, num_seats=self.num_seats)
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(self.token_set.meeting.channel_group_name(), {"type": "vote.closing",
                                                                                               "vote_id": self.pk})
