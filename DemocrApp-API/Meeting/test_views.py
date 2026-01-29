@@ -181,13 +181,12 @@ class ManagementInterfaceCases(BaseTestCase):
             self.assertEqual(v.state, state)
 
     def test_close_vote(self):
-        v = Vote(name='name', token_set=self.ts, method=Vote.YES_NO_ABS)
+        v = Vote(name='name', token_set=self.ts, method=Vote.YES_NO_ABS, majority_threshold='simple')
         v.save()
         self.assertEqual(3, v.option_set.count())
         non_live_states = [x[0] for x in Vote.states]
         non_live_states.remove(Vote.LIVE)
-        request_args = [reverse('meeting/close_vote', args=[self.m.id, v.id]),
-                        {'num_seats': 2}]
+        request_args = [reverse('meeting/close_vote', args=[self.m.id, v.id]), {}]
         for s in non_live_states:
             v.state = s
             v.save()

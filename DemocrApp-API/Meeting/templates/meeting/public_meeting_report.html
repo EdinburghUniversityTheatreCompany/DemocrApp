@@ -1,0 +1,85 @@
+{% extends "meeting/reports/_base.html" %}
+
+{% block title %}{{ token_set.meeting.name }} - Public Meeting Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">{{ token_set.meeting.name }}</h1>
+        <p class="text-muted mb-0">
+            <i class="fa fa-calendar"></i> {{ token_set.meeting.time|date:"F j, Y, g:i a" }}
+            {% if token_set.meeting.close_time %}
+                - {{ token_set.meeting.close_time|date:"g:i a" }}
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+{# Vote Outcomes Summary Table #}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fa fa-list-alt"></i> Vote Outcomes Summary</h5>
+    </div>
+    <div class="card-body">
+        {% if summary_rows %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Vote Name</th>
+                        <th>Outcome</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary_rows %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'meeting/public_vote_report' row.public_id %}" class="text-decoration-none">
+                                {{ row.name | safe }}
+                            </a>
+                        </td>
+                        <td>{{ row.outcome }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No votes to display.</p>
+        {% endif %}
+    </div>
+</div>
+
+{# Detailed Results Section #}
+<h2 class="mb-3"><i class="fa fa-check-square-o"></i> Detailed Results</h2>
+
+{% for vote in votes %}
+<div class="card mb-4" id="vote-{{ vote.id }}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <a href="{% url 'meeting/public_vote_report' vote.public_id %}" class="text-decoration-none">
+                {{ vote.name | safe }}
+            </a>
+        </h5>
+        <div>
+            <span class="badge bg-secondary">{{ vote.get_method_display }}</span>
+            <span class="badge bg-info">{{ vote.responses }} responses</span>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if vote.description %}
+        <p class="text-muted">{{ vote.description | safe }}</p>
+        {% endif %}
+        {{ vote.results | safe }}
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+    <i class="fa fa-info-circle"></i> No votes recorded for this meeting.
+</div>
+{% endfor %}
+
+<div class="alert alert-info mt-4">
+    <i class="fa fa-info-circle"></i> This is a public report. Individual voter identities are not disclosed to protect ballot secrecy. Click on any vote name to see detailed anonymized ballots.
+</div>
+{% endblock %}

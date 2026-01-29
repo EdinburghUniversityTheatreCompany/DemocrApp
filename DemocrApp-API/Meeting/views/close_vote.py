@@ -13,8 +13,10 @@ def close_vote(request, meeting_id, vote_id):
     vote = get_object_or_404(Vote, pk=vote_id)
     if vote.token_set.meeting != meeting or vote.state != vote.LIVE:
         return JsonResponse({'result': 'failure'}, status=401)
-    num_seats = int(request.POST['num_seats']) if 'num_seats' in request.POST else 1
-    vote.close(num_seats)
+    try:
+        vote.close()
+    except ValueError as e:
+        return JsonResponse({'result': 'failure', 'error': str(e)}, status=400)
     message = {'type': 'success'}
     return HttpResponseRedirect(reverse('meeting/manage', args=[meeting.id]))
 

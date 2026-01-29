@@ -10,6 +10,18 @@
     </ol>
 </nav>
 
+{% if vote.state == 'CL' %}
+<div class="alert alert-info no-print mb-3">
+    <i class="fa fa-share-alt"></i> <strong>Public Report:</strong>
+    <a href="{% url 'meeting/public_vote_report' vote.public_id %}" target="_blank">
+        {{ request.scheme }}://{{ request.get_host }}{% url 'meeting/public_vote_report' vote.public_id %}
+    </a>
+    <button class="btn btn-sm btn-outline-primary float-end" onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'meeting/public_vote_report' vote.public_id %}')">
+        <i class="fa fa-copy"></i> Copy Link
+    </button>
+</div>
+{% endif %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="mb-1">{{ vote.name | safe }}</h1>
