@@ -23,11 +23,11 @@ class Meeting(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            super(Meeting, self).save(args, kwargs)
+            super(Meeting, self).save(*args, **kwargs)
             ts = TokenSet(meeting_id=self.pk)
             ts.save()
         else:
-            super(Meeting, self).save(args, kwargs)
+            super(Meeting, self).save(*args, **kwargs)
 
     def __str__(self):
         return "{} \t-\t {}".format(self.time.date(), self.name)

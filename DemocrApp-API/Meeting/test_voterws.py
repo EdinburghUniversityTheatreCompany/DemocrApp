@@ -180,16 +180,17 @@ class TestSTVValidation:
     def setup_method(self):
         """Create test vote with options"""
         self.meeting = Meeting.objects.create()
+        self.token_set = TokenSet.objects.create(meeting=self.meeting)
         self.vote = Vote.objects.create(
-            meeting=self.meeting,
+            token_set=self.token_set,
             method=Vote.STV,
-            title="Test STV Vote"
+            name="Test STV Vote"
         )
         self.opt1 = Option.objects.create(vote=self.vote, name="Option 1")
         self.opt2 = Option.objects.create(vote=self.vote, name="Option 2")
         self.opt3 = Option.objects.create(vote=self.vote, name="Option 3")
-        self.token_set = TokenSet.objects.create(meeting=self.meeting)
         self.auth_token = AuthToken.objects.create(token_set=self.token_set)
+        self.voter_token = VoterToken.objects.create(auth_token=self.auth_token)
 
     def test_consecutive_preferences_valid(self):
         """Valid: 1, 2, 3"""
@@ -200,9 +201,9 @@ class TestSTVValidation:
             str(self.opt3.pk): "3"
         }
         # Should not raise
-        STV._handle_ballot(self.vote, self.auth_token.pk, ballot)
+        STV._handle_ballot(self.vote, self.voter_token.pk, ballot)
         # Verify entries were created
-        assert BallotEntry.objects.filter(token_id=self.auth_token.pk).count() == 3
+        assert BallotEntry.objects.filter(token_id=self.voter_token.pk).count() == 3
 
     def test_partial_ranking_valid(self):
         """Valid: 1, 2 (third option not ranked)"""
@@ -212,9 +213,9 @@ class TestSTVValidation:
             str(self.opt2.pk): "2"
         }
         # Should not raise
-        STV._handle_ballot(self.vote, self.auth_token.pk, ballot)
+        STV._handle_ballot(self.vote, self.voter_token.pk, ballot)
         # Verify entries were created
-        assert BallotEntry.objects.filter(token_id=self.auth_token.pk).count() == 2
+        assert BallotEntry.objects.filter(token_id=self.voter_token.pk).count() == 2
 
     def test_skipped_number_invalid(self):
         """Invalid: 1, 3 (skipped 2)"""
