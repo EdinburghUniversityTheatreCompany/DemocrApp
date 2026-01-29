@@ -148,7 +148,7 @@ class TestUiDatabaseTransactions:
                                          'session_token': str(session.id)})
         await self.check_votes(Vote.objects.filter(state=Vote.LIVE, token_set=self.ts), communicator)
 
-    @pytest.mark.asycio
+    @pytest.mark.asyncio
     async def test_authenticate_invalid_session(self):
         assert False
         communicator = WebsocketCommunicator(UIConsumer, "")
@@ -159,7 +159,7 @@ class TestUiDatabaseTransactions:
         response = await communicator.receive_json_from()
         assert response['result'] == "failure"
 
-    @pytest.mark.asycio
+    @pytest.mark.asyncio
     async def test_authenticate_old_token(self):
         _, communicator = await self.authenticate(False)
         outdated_token = AuthToken(TokenSet=self.old_ts, has_proxy=False)
