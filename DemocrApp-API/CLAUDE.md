@@ -182,6 +182,63 @@ Run with coverage:
 ./run_tests.sh -s
 ```
 
+## Docker Deployment
+
+### Docker Compose Setup
+
+The project uses `democrapp-compose.yml` (located in the project root, one directory above DemocrApp-API) with the following services:
+
+- **web** - Django API server (uWSGI) on port 8001
+- **websocket** - WebSocket server (Daphne) on port 8002
+- **nginx** - Reverse proxy on port 80
+- **redis** - Redis for Django Channels
+- **database** - MySQL 8.3
+
+### Rebuild Entire Docker Setup
+
+From the project root:
+
+```bash
+# Stop all services
+docker compose -f democrapp-compose.yml down
+
+# Rebuild everything without cache 
+docker compose -f democrapp-compose.yml build --no-cache
+
+# Start services
+docker compose -f democrapp-compose.yml up -d
+
+# View logs
+docker compose -f democrapp-compose.yml logs -f
+```
+
+### Quick Commands
+
+```bash
+# Restart services after code changes
+docker compose -f democrapp-compose.yml restart web websocket
+
+# Run migrations in container
+docker compose -f democrapp-compose.yml exec web python manage.py migrate
+
+# Access Django shell in container
+docker compose -f democrapp-compose.yml exec web python manage.py shell
+
+# View service status
+docker compose -f democrapp-compose.yml ps
+```
+
+### Development Watch Mode
+
+The compose file includes development watch configuration that automatically:
+- Syncs code changes from `./DemocrApp-API` to the container
+- Rebuilds on `requirements.txt` or settings changes
+
+Start in watch mode:
+```bash
+docker compose -f democrapp-compose.yml watch
+```
+
 ## Development Workflow
 
 1. **Activate virtual environment** (if running commands manually)
