@@ -395,7 +395,7 @@
     }
 
     function show_report_modal(ballot_name, data) {
-        $('#reportModalLabel').text(ballot_name + ' - Results');
+        $('#reportModalLabel').text(data.ballot_name + ' - Results');
         var reportContent = data.results;
         if (!reportContent || reportContent.trim() === '') {
             reportContent = '<p class="text-muted">No results available yet.</p>';
