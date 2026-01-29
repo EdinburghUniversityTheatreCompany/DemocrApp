@@ -9,7 +9,7 @@ from django.conf import settings
 
 
 @pytest.fixture(scope='session', autouse=True)
-def configure_test_channel_layer(django_db_setup, django_db_blocker):
+def configure_test_channel_layer():
     """
     Override CHANNEL_LAYERS to use InMemoryChannelLayer for all tests.
 
@@ -20,9 +20,8 @@ def configure_test_channel_layer(django_db_setup, django_db_blocker):
     Scope: session - Runs once before all tests
     Autouse: True - Automatically applied to all tests
     """
-    with django_db_blocker.unblock():
-        settings.CHANNEL_LAYERS = {
-            "default": {
-                "BACKEND": "channels.layers.InMemoryChannelLayer",
-            }
+    settings.CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
         }
+    }

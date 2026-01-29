@@ -123,18 +123,16 @@ class TestUiDatabaseTransactions:
         from asgiref.sync import sync_to_async
 
         session, communicator = await self.authenticate(False)
-        session_id = session.id  # Store ID immediately while in async context where it was created
-
         await communicator.send_json_to({'type': 'auth_request',
-                                         'session_token': str(session_id)})
-        response = await communicator.receive_json_from(timeout=5)
+                                         'session_token': str(session.id)})
+        response = await communicator.receive_json_from()
         assert "success" == response['result']
         assert 1 == len(response['voters'])
 
         @sync_to_async
         def get_primary_token_id():
-            # Query fresh from database using session_id
-            fresh_session = Session.objects.get(pk=session_id)
+            # Query fresh from database
+            fresh_session = Session.objects.get(pk=session.id)
             return fresh_session.auth_token.votertoken_set.filter(proxy=False).first().id
 
         primary = await get_primary_token_id()
@@ -148,18 +146,16 @@ class TestUiDatabaseTransactions:
         from asgiref.sync import sync_to_async
 
         session, communicator = await self.authenticate(True)
-        session_id = session.id  # Store ID immediately
-
         await communicator.send_json_to({'type': 'auth_request',
-                                         'session_token': str(session_id)})
-        response = await communicator.receive_json_from(timeout=5)
+                                         'session_token': str(session.id)})
+        response = await communicator.receive_json_from()
         assert "success" == response['result']
         assert 2 == len(response['voters'])
 
         @sync_to_async
         def get_token_ids():
             # Query fresh from database
-            fresh_session = Session.objects.get(pk=session_id)
+            fresh_session = Session.objects.get(pk=session.id)
             primary_id = fresh_session.auth_token.votertoken_set.filter(proxy=False).first().id
             proxy_id = fresh_session.auth_token.votertoken_set.filter(proxy=True).first().id
             return primary_id, proxy_id
