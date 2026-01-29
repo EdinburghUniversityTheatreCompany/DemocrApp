@@ -31,6 +31,12 @@ def _build_meeting_data(meeting):
             ],
             "results": vote.results_data or {},
         }
+        # Add majority_threshold for YNA votes
+        if vote.method == Vote.YES_NO_ABS:
+            vote_data["majority_threshold"] = vote.majority_threshold
+        # Add num_seats for STV votes
+        if vote.method == Vote.STV:
+            vote_data["num_seats"] = vote.num_seats
         votes_data.append(vote_data)
 
     return {

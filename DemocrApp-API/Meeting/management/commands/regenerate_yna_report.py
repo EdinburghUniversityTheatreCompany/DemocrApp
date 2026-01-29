@@ -40,11 +40,16 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Regenerating vote {vote.pk}: {vote.name}")
 
+        # Ensure majority_threshold is set (default to simple for legacy votes)
+        if not vote.majority_threshold:
+            vote.majority_threshold = 'simple'
+            self.stdout.write(f"  Set majority_threshold to 'simple' (legacy vote)")
+
         # Set back to LIVE
         vote.state = Vote.LIVE
         vote.save()
 
-        # Re-close (YNA votes use num_seats=1)
-        vote.close(1)
+        # Re-close
+        vote.close()
 
         self.stdout.write(self.style.SUCCESS(f"  Vote {vote.pk} regenerated successfully"))

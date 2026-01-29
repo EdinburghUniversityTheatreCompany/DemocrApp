@@ -35,11 +35,34 @@ class YNA(VoteMethod):
         has_majority = y > n if yes_no_total > 0 else False
         has_two_thirds = y >= (2 * n) if yes_no_total > 0 else False
 
-        # Generate majority badges
-        majority_badge = '<span class="badge bg-success">✓ Yes</span>' if has_majority else '<span class="badge bg-danger">✗ No</span>'
-        two_thirds_badge = '<span class="badge bg-success">✓ Yes</span>' if has_two_thirds else '<span class="badge bg-danger">✗ No</span>'
+        # Determine pass/fail based on threshold
+        threshold = vote.majority_threshold
+        if threshold == 'simple':
+            passed = has_majority
+            threshold_label = 'Simple Majority'
+        elif threshold == 'two_thirds':
+            passed = has_two_thirds
+            threshold_label = 'Two-Thirds Majority'
+        else:
+            # Legacy votes without threshold set
+            passed = None
+            threshold_label = None
+
+        # Generate status badge
+        if passed is not None:
+            status_badge = '<span class="badge bg-success">✓ PASSED</span>' if passed else '<span class="badge bg-danger">✗ FAILED</span>'
+        else:
+            status_badge = ''
 
         # Generate HTML results
+        status_section = ''
+        if threshold_label:
+            status_section = """
+                <hr>
+                <h6>{}</h6>
+                <p class="mb-0 fs-4">{}</p>
+            """.format(threshold_label, status_badge)
+
         html_results = """
         <div class="card">
             <div class="card-body">
@@ -75,13 +98,10 @@ class YNA(VoteMethod):
                         </tr>
                     </tbody>
                 </table>
-                <hr>
-                <h6>Majority Status</h6>
-                <p class="mb-1"><strong>Simple Majority (Yes &gt; No):</strong> {}</p>
-                <p class="mb-0"><strong>Two-Thirds Majority:</strong> {}</p>
+                {}
             </div>
         </div>
-        """.format(y, y_pct, n, n_pct, a, a_pct, total, majority_badge, two_thirds_badge)
+        """.format(y, y_pct, n, n_pct, a, a_pct, total, status_section)
 
         vote.results = html_results
         vote.results_data = {
@@ -97,6 +117,8 @@ class YNA(VoteMethod):
             "yes_no_total": yes_no_total,
             "has_majority": has_majority,
             "has_two_thirds": has_two_thirds,
+            "passed": passed,
+            "majority_threshold": threshold,
         }
         vote.state = Vote.CLOSED
         vote.save()

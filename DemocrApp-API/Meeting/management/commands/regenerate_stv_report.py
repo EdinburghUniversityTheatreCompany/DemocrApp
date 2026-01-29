@@ -68,11 +68,12 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Regenerating vote {vote.pk}: {vote.name} ({num_seats} seat(s))")
 
-        # Set back to LIVE
+        # Set num_seats on vote and set back to LIVE
+        vote.num_seats = num_seats
         vote.state = Vote.LIVE
         vote.save()
 
-        # Re-close with the inferred number of seats
-        vote.close(num_seats)
+        # Re-close
+        vote.close()
 
         self.stdout.write(self.style.SUCCESS(f"  Vote {vote.pk} re-closing..."))

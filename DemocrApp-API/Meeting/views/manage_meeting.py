@@ -33,7 +33,11 @@ def close_meeting(request, meeting_id):
         meeting = get_object_or_404(Meeting, pk=meeting_id)
         for t_set in meeting.tokenset_set.all():
             for vote in t_set.vote_set.filter(state=Vote.LIVE):
-                vote.close(1)
+                try:
+                    vote.close()
+                except ValueError:
+                    # Vote doesn't have required fields set, skip it
+                    pass
             for vote in t_set.vote_set.filter(state=Vote.READY):
                 vote.delete()
         channel_layer = get_channel_layer()
