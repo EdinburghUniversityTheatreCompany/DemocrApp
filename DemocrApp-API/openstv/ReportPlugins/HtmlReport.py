@@ -111,8 +111,9 @@ class HtmlReport(ReportPlugin):
 
         # Winners section
         out('<h3>Winners</h3>\n<ul class="winners-list">\n')
-        for w in winners:
-            out('  <li>%s</li>\n' % self._get_candidate_name(w))
+        for i, w in enumerate(winners, start=1):
+            round_num = self.e.wonAtRound[w] + 1  # Convert from 0-indexed to 1-indexed
+            out('  <li>%d. %s (round %d)</li>\n' % (i, self._get_candidate_name(w), round_num))
         out('</ul>\n')
 
         # Eliminated section

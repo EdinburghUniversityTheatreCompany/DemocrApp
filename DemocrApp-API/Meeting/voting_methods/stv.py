@@ -75,11 +75,18 @@ class STV(VoteMethod):
         vote.results = r.outputText
 
         # Store structured results data including round breakdown
-        winner_names = [names[w] for w in electionCounter.winners]
+        # Build winners list with order and round information
+        winners = []
+        for i, w in enumerate(electionCounter.winners, start=1):
+            winners.append({
+                "name": names[w],
+                "order": i,
+                "round": electionCounter.wonAtRound[w] + 1  # Convert to 1-indexed
+            })
         loser_names = [names[l] for l in electionCounter.losers] if hasattr(electionCounter, 'losers') else []
 
         vote.results_data = {
-            "winners": winner_names,
+            "winners": winners,
             "losers": loser_names,
             "seats": seats,
             "num_ballots": ballots.numBallots if hasattr(ballots, 'numBallots') else 0,

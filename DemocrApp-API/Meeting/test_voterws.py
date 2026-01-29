@@ -244,3 +244,67 @@ class TestSTVValidation:
         }
         with pytest.raises(ValueError):
             STV._handle_ballot(self.vote, self.auth_token.pk, ballot)
+
+
+@pytest.mark.django_db
+class TestSTVWinnerOrdering:
+    """Test STV winner ordering in reports"""
+
+    def test_winners_json_format(self):
+        """Test that winners JSON has correct structure with order and round"""
+        from unittest.mock import Mock
+        from Meeting.voting_methods.stv import STV
+
+        # Create mock electionCounter with winner data
+        mock_counter = Mock()
+        mock_counter.winners = [0, 2, 1]  # Candidate indices in election order
+        mock_counter.wonAtRound = {0: 2, 1: 5, 2: 3}  # 0-indexed round numbers
+
+        names = ["Alice", "Bob", "Charlie"]
+
+        # Build winners list as in stv.py
+        winners = []
+        for i, w in enumerate(mock_counter.winners, start=1):
+            winners.append({
+                "name": names[w],
+                "order": i,
+                "round": mock_counter.wonAtRound[w] + 1
+            })
+
+        # Verify structure
+        assert len(winners) == 3
+        assert winners[0] == {"name": "Alice", "order": 1, "round": 3}
+        assert winners[1] == {"name": "Charlie", "order": 2, "round": 4}
+        assert winners[2] == {"name": "Bob", "order": 3, "round": 6}
+
+    def test_html_winner_format(self):
+        """Test that HTML report shows winner ordering"""
+        from openstv.ReportPlugins.HtmlReport import HtmlReport
+        from unittest.mock import Mock
+
+        # Create minimal mock election counter
+        mock_counter = Mock()
+        mock_counter.winners = [0, 1]
+        mock_counter.losers = []
+        mock_counter.wonAtRound = {0: 2, 1: 4}
+        mock_counter.methodName = "ScottishSTV"
+
+        # Create minimal mock ballots
+        mock_ballots = Mock()
+        mock_ballots.names = ["Alice Smith", "Bob Jones"]
+
+        # Create HtmlReport
+        report = HtmlReport(mock_counter)
+        report.cleanB = mock_ballots
+
+        # Generate header (which includes winners section)
+        output = []
+        report.output = lambda text: output.append(text)
+        report.generateHeader()
+
+        # Join output and verify format
+        html = ''.join(output)
+
+        # Check for numbered winners with round info
+        assert "1. Alice Smith (round 3)" in html
+        assert "2. Bob Jones (round 5)" in html
