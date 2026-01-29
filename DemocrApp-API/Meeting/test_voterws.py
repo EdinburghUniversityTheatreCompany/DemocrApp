@@ -67,44 +67,77 @@ class TestUiDatabaseTransactions:
         assert self.old_ts in self.m.tokenset_set.all()
 
     async def check_votes(self, expected_votes, communicator):
-        v_set = expected_votes
+        from asgiref.sync import sync_to_async
+
+        # Fetch all votes and their options upfront to avoid sync operations in async loop
+        @sync_to_async
+        def fetch_vote_data():
+            votes_list = list(expected_votes.all())
+            votes_with_options = []
+            for vote in votes_list:
+                options_list = list(vote.option_set.all())
+                votes_with_options.append({
+                    'vote': vote,
+                    'options': options_list,
+                    'id': vote.id,
+                    'name': vote.name,
+                    'description': vote.description,
+                    'method': vote.method
+                })
+            return votes_with_options, len(votes_list)
+
+        votes_data, expected_count = await fetch_vote_data()
         vote_count = 0
         vote_ids = []
-        for v in v_set.all():
+
+        for vote_data in votes_data:
             response = await communicator.receive_json_from()
             while response['type'] == 'auth_response':
                 response = await communicator.receive_json_from(timeout=10)
             assert 'ballot' == response['type']
             assert response['ballot_id']
-            vote = v_set.filter(id=response['ballot_id']).first()
-            assert vote
-            assert vote in v_set.all()
-            assert vote.id not in vote_ids
-            vote_ids.append(vote.id)
-            assert vote.name == response['title']
-            assert vote.description == response['desc']
-            assert vote.method == response['method']
+
+            # Find the vote in our cached data
+            matching_vote = next((vd for vd in votes_data if vd['id'] == response['ballot_id']), None)
+            assert matching_vote is not None
+            assert matching_vote['id'] not in vote_ids
+            vote_ids.append(matching_vote['id'])
+            assert matching_vote['name'] == response['title']
+            assert matching_vote['description'] == response['desc']
+            assert matching_vote['method'] == response['method']
+
             options = response['options']
-            assert vote.option_set.count() == len(options)
-            for o in vote.option_set.all():
+            assert len(matching_vote['options']) == len(options)
+            for o in matching_vote['options']:
                 op = [op for op in options if op['id'] == o.id]
                 assert op
                 assert o.name == op[0]['name']
             assert response['proxies']
             assert not response['existing_ballots']
             vote_count += 1
-        assert v_set.count() == vote_count
+        assert expected_count == vote_count
 
     @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_single(self):
+        from asgiref.sync import sync_to_async
+
         session, communicator = await self.authenticate(False)
+        session_id = session.id  # Store ID immediately while in async context where it was created
+
         await communicator.send_json_to({'type': 'auth_request',
-                                         'session_token': str(session.id)})
-        response = await communicator.receive_json_from()
+                                         'session_token': str(session_id)})
+        response = await communicator.receive_json_from(timeout=5)
         assert "success" == response['result']
         assert 1 == len(response['voters'])
-        primary = session.auth_token.votertoken_set.filter(proxy=False).first().id
+
+        @sync_to_async
+        def get_primary_token_id():
+            # Query fresh from database using session_id
+            fresh_session = Session.objects.get(pk=session_id)
+            return fresh_session.auth_token.votertoken_set.filter(proxy=False).first().id
+
+        primary = await get_primary_token_id()
         primary_dict_list = [voter for voter in response['voters'] if voter['token'] == primary]
         assert primary_dict_list  # checks the list has an entry
         assert "primary" == primary_dict_list[0]['type']
@@ -112,57 +145,92 @@ class TestUiDatabaseTransactions:
     @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_proxy(self):
+        from asgiref.sync import sync_to_async
+
         session, communicator = await self.authenticate(True)
+        session_id = session.id  # Store ID immediately
+
         await communicator.send_json_to({'type': 'auth_request',
-                                         'session_token': str(session.id)})
-        response = await communicator.receive_json_from()
+                                         'session_token': str(session_id)})
+        response = await communicator.receive_json_from(timeout=5)
         assert "success" == response['result']
         assert 2 == len(response['voters'])
-        primary = session.auth_token.votertoken_set.filter(proxy=False).first().id
+
+        @sync_to_async
+        def get_token_ids():
+            # Query fresh from database
+            fresh_session = Session.objects.get(pk=session_id)
+            primary_id = fresh_session.auth_token.votertoken_set.filter(proxy=False).first().id
+            proxy_id = fresh_session.auth_token.votertoken_set.filter(proxy=True).first().id
+            return primary_id, proxy_id
+
+        primary, proxy = await get_token_ids()
         primary_dict_list = [voter for voter in response['voters'] if voter['token'] == primary]
         assert primary_dict_list  # checks the list has an entry
         assert "primary" == primary_dict_list[0]['type']
-        proxy = session.auth_token.votertoken_set.filter(proxy=True).first().id
         poxy_dict_list = [voter for voter in response['voters'] if voter['token'] == proxy]
         assert poxy_dict_list  # checks the list has an entry
         assert "proxy" == poxy_dict_list[0]['type']
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail(reason='stuff refuses to be awaited for unknown reasons')
     async def test_votes_are_dispatched_as_they_are_opened(self):
-        # TODO(Figure out why this only passes if run on its own)
-        v1 = Vote(name='y n a test', token_set=self.ts, method=Vote.YES_NO_ABS, state=Vote.READY)
-        v1.save()
-        v2 = Vote(token_set=self.ts, name='stv test', method=Vote.STV, state=Vote.READY)
-        v2.save()
-        for x in range(0, 5):
-            Option(name=x, vote=v2).save()
+        from asgiref.sync import sync_to_async
+
+        @sync_to_async
+        def create_test_votes():
+            v1 = Vote(name='y n a test', token_set=self.ts, method=Vote.YES_NO_ABS, state=Vote.READY)
+            v1.save()
+            v2 = Vote(token_set=self.ts, name='stv test', method=Vote.STV, state=Vote.READY)
+            v2.save()
+            for x in range(0, 5):
+                Option(name=x, vote=v2).save()
+            return v1, v2
+
+        v1, v2 = await create_test_votes()
         session, communicator = await self.authenticate(False)
         await communicator.send_json_to({'type': 'auth_request',
                                          'session_token': str(session.id)})
         response = await communicator.receive_json_from()
         assert "success" == response['result']
+        @sync_to_async
+        def get_vote_queryset(vote_id):
+            return Vote.objects.filter(pk=vote_id)
+
         channel_layer = get_channel_layer()
         await channel_layer.group_send(self.m.channel_group_name(), {"type": "vote.opening",
                                                                      "vote_id": v1.id})
-        await self.check_votes(Vote.objects.filter(pk=v1.id), communicator)
+        v1_queryset = await get_vote_queryset(v1.id)
+        await self.check_votes(v1_queryset, communicator)
         await channel_layer.group_send(self.m.channel_group_name(), {"type": "vote.opening",
                                                                      "vote_id": v2.id})
-        await self.check_votes(Vote.objects.filter(pk=v2.id), communicator)
+        v2_queryset = await get_vote_queryset(v2.id)
+        await self.check_votes(v2_queryset, communicator)
 
     @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_with_open_votes(self):
-        v = Vote(name='y n a test', token_set=self.ts, method=Vote.YES_NO_ABS, state=Vote.LIVE)
-        v.save()
-        v = Vote(token_set=self.ts, method=Vote.STV, state=Vote.LIVE)
-        v.save()
-        for x in range(0, 5):
-            Option(name=x, vote=v).save()
+        from asgiref.sync import sync_to_async
+
+        @sync_to_async
+        def create_open_votes():
+            v1 = Vote(name='y n a test', token_set=self.ts, method=Vote.YES_NO_ABS, state=Vote.LIVE)
+            v1.save()
+            v2 = Vote(token_set=self.ts, method=Vote.STV, state=Vote.LIVE)
+            v2.save()
+            for x in range(0, 5):
+                Option(name=x, vote=v2).save()
+
+        await create_open_votes()
         session, communicator = await self.authenticate(False)
         await communicator.send_json_to({'type': 'auth_request',
                                          'session_token': str(session.id)})
-        await self.check_votes(Vote.objects.filter(state=Vote.LIVE, token_set=self.ts), communicator)
+
+        @sync_to_async
+        def get_live_votes():
+            return Vote.objects.filter(state=Vote.LIVE, token_set=self.ts)
+
+        live_votes = await get_live_votes()
+        await self.check_votes(live_votes, communicator)
 
     @pytest.mark.django_db
     @pytest.mark.asyncio
@@ -179,12 +247,21 @@ class TestUiDatabaseTransactions:
     @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_old_token(self):
+        from asgiref.sync import sync_to_async
+
         _, communicator = await self.authenticate(False)
-        outdated_token = AuthToken(TokenSet=self.old_ts, has_proxy=False)
-        session = Session(auth_token=outdated_token)
-        session.save()
+
+        @sync_to_async
+        def create_old_session():
+            outdated_token = AuthToken(token_set=self.old_ts, has_proxy=False)
+            outdated_token.save()
+            session = Session(auth_token=outdated_token)
+            session.save()
+            return session.id
+
+        session_id = await create_old_session()
         await communicator.send_json_to({'type': 'auth_request',
-                                         'session_token': str(session.id)})
+                                         'session_token': str(session_id)})
         response = await communicator.receive_json_from()
         assert "failure" == response['result']
 
