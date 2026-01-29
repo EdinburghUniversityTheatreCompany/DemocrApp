@@ -30,6 +30,15 @@ class YNA(VoteMethod):
         n_pct = (n / total * 100) if total > 0 else 0
         a_pct = (a / total * 100) if total > 0 else 0
 
+        # Calculate majority status (excluding abstentions)
+        yes_no_total = y + n
+        has_majority = y > n if yes_no_total > 0 else False
+        has_two_thirds = y >= (2 * n) if yes_no_total > 0 else False
+
+        # Generate majority badges
+        majority_badge = '<span class="badge bg-success">✓ Yes</span>' if has_majority else '<span class="badge bg-danger">✗ No</span>'
+        two_thirds_badge = '<span class="badge bg-success">✓ Yes</span>' if has_two_thirds else '<span class="badge bg-danger">✗ No</span>'
+
         # Generate HTML results
         html_results = """
         <div class="card">
@@ -66,9 +75,13 @@ class YNA(VoteMethod):
                         </tr>
                     </tbody>
                 </table>
+                <hr>
+                <h6>Majority Status</h6>
+                <p class="mb-1"><strong>Simple Majority (Yes &gt; No):</strong> {}</p>
+                <p class="mb-0"><strong>Two-Thirds Majority:</strong> {}</p>
             </div>
         </div>
-        """.format(y, y_pct, n, n_pct, a, a_pct, total)
+        """.format(y, y_pct, n, n_pct, a, a_pct, total, majority_badge, two_thirds_badge)
 
         vote.results = html_results
         vote.results_data = {
@@ -80,7 +93,10 @@ class YNA(VoteMethod):
                 "yes": round(y_pct, 1),
                 "no": round(n_pct, 1),
                 "abstain": round(a_pct, 1)
-            }
+            },
+            "yes_no_total": yes_no_total,
+            "has_majority": has_majority,
+            "has_two_thirds": has_two_thirds,
         }
         vote.state = Vote.CLOSED
         vote.save()
