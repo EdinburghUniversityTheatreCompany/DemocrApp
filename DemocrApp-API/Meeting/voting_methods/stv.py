@@ -113,3 +113,46 @@ class STV(VoteMethod):
         i = names.index(tie.option.name)
         tie.delete()
         return tied_candidates[i]
+
+    @classmethod
+    def _handle_ballot(cls, vote, voter_token_id, ballot_entries):
+        """
+        Handle STV ballot submission with consecutive number validation.
+
+        STV requires preferences to be consecutive integers starting from 1:
+        - Valid: {opt1: 1, opt2: 2, opt3: 3}
+        - Valid: {opt1: 1, opt2: 2} (partial ranking)
+        - Invalid: {opt1: 1, opt2: 3} (skipped 2)
+        - Invalid: {opt1: 2, opt2: 3} (didn't start at 1)
+        """
+        from Meeting.models import BallotEntry
+
+        # Extract and validate preference values
+        preferences = []
+        for option_id, pref_value in ballot_entries.items():
+            try:
+                value = int(pref_value)
+                if value >= 1:  # Only consider positive preferences
+                    preferences.append((option_id, value))
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid preference value: {pref_value}")
+
+        # Sort by preference value to check consecutiveness
+        preferences.sort(key=lambda x: x[1])
+
+        # Validate consecutive numbering starting from 1
+        expected_pref = 1
+        for option_id, pref_value in preferences:
+            if pref_value != expected_pref:
+                raise ValueError(
+                    f"Preferences must be consecutive whole numbers starting from 1. "
+                    f"Expected {expected_pref}, got {pref_value}"
+                )
+            expected_pref += 1
+
+        # Save validated ballot entries
+        for option_id, pref_value in preferences:
+            option = vote.option_set.filter(pk=option_id).first()
+            if option is not None:
+                be = BallotEntry(option=option, token_id=voter_token_id, value=pref_value)
+                be.save()

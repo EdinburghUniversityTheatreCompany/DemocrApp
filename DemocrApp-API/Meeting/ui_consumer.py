@@ -81,19 +81,28 @@ class UIConsumer(JsonWebsocketConsumer):
         tokens = []
         self.session.refresh_from_db()
         if self.session.auth_token.valid_for(vote) and vote.state == Vote.LIVE:
-            for voter in message['votes'].items():
-                voter_id = int(voter[0])
-                ballot_entries = voter[1]
-                if voter_id in self.voter_tokens:
-                    vote.get_method_class().receive_ballot(vote, voter_id, ballot_entries)
-                    tokens.append(voter_id)
+            try:
+                for voter in message['votes'].items():
+                    voter_id = int(voter[0])
+                    ballot_entries = voter[1]
+                    if voter_id in self.voter_tokens:
+                        vote.get_method_class().receive_ballot(vote, voter_id, ballot_entries)
+                        tokens.append(voter_id)
 
-            message = {
-                "type": "ballot_receipt",
-                "ballot_id": vote_num,
-                "voter_token": tokens,
-            }
-            self.send_json(message)
+                message = {
+                    "type": "ballot_receipt",
+                    "ballot_id": vote_num,
+                    "voter_token": tokens,
+                }
+                self.send_json(message)
+            except ValueError as e:
+                # Validation error - send back to user
+                message = {
+                    "type": "validation_error",
+                    "message": str(e),
+                    "ballot_id": vote_num
+                }
+                self.send_json(message)
         else:
             message = {"type": "ballot_receipt",
                        "ballot_id": vote_num,

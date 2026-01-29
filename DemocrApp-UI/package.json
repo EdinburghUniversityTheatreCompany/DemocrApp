@@ -6,6 +6,12 @@
   "author": "rphi <8237136+rphi@users.noreply.github.com>",
   "license": "UNLICENCED",
   "private": true,
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "scripts": {
+    "test": "jest"
   }
 }

@@ -255,9 +255,10 @@ function submitSTVBallot(cardId) {
   var currentpref = 1;
   var out = {}
   options.forEach(option => {
-    if (!option.value) { /* ignore */ }
-    else if (option.value % 1 != 0) { currentpref = -1; return;}
-    else if (option.value == currentpref) { currentpref++; out[option.name] = option.value; }
+    const value = parseInt(option.value, 10);
+    if (isNaN(value) || value === 0) { /* ignore */ }
+    else if (value % 1 !== 0) { currentpref = -1; return; }
+    else if (value === currentpref) { currentpref++; out[option.name] = value; }
     else { currentpref = -1; return; }
   })
   if (currentpref == -1) {
