@@ -74,7 +74,7 @@ class STV(VoteMethod):
         r.generateReport()
         vote.results = r.outputText
 
-        # Store structured results data
+        # Store structured results data including round breakdown
         winner_names = [names[w] for w in electionCounter.winners]
         loser_names = [names[l] for l in electionCounter.losers] if hasattr(electionCounter, 'losers') else []
 
@@ -83,6 +83,14 @@ class STV(VoteMethod):
             "losers": loser_names,
             "seats": seats,
             "num_ballots": ballots.numBallots if hasattr(ballots, 'numBallots') else 0,
+            "rounds": [
+                {
+                    "round": round_num + 1,
+                    "counts": {names[c]: float(electionCounter.count[round_num][c]) for c in range(len(names))},
+                    "exhausted": float(electionCounter.exhausted[round_num]),
+                }
+                for round_num in range(electionCounter.numRounds)
+            ]
         }
         vote.save()
 
