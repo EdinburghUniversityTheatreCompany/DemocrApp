@@ -9,8 +9,9 @@ from .ui_consumer import UIConsumer
 
 
 @pytest.mark.asyncio
+@pytest.mark.django_db
 async def test_bad_message():
-    communicator = WebsocketCommunicator(UIConsumer, "")
+    communicator = WebsocketCommunicator(UIConsumer.as_asgi(), "")
     connected, subprotocol = await communicator.connect()
     assert connected
     # Test sending text
@@ -25,7 +26,7 @@ async def test_bad_message():
 @pytest.mark.django_db(transaction=True)
 class TestUiDatabaseTransactions:
 
-    def setup(self):
+    def setup_method(self):
         self.m = Meeting()
         self.m.save()
         self.old_ts = TokenSet(meeting=self.m)
@@ -39,11 +40,23 @@ class TestUiDatabaseTransactions:
         self.client.force_login(self.admin)
 
     async def authenticate(self, proxy):
-        at = AuthToken(token_set=self.ts, has_proxy=proxy)
-        at.save()
-        session = Session(auth_token=at)
-        session.save()
-        communicator = WebsocketCommunicator(UIConsumer, "")
+        from asgiref.sync import sync_to_async
+
+        @sync_to_async
+        def create_auth_token():
+            at = AuthToken(token_set=self.ts, has_proxy=proxy)
+            at.save()
+            # Create primary voter token
+            VoterToken(auth_token=at, proxy=False).save()
+            # Create proxy voter token if requested
+            if proxy:
+                VoterToken(auth_token=at, proxy=True).save()
+            session = Session(auth_token=at)
+            session.save()
+            return session
+
+        session = await create_auth_token()
+        communicator = WebsocketCommunicator(UIConsumer.as_asgi(), "")
         connected, subprotocol = await communicator.connect()
         assert connected
         return session, communicator
@@ -82,6 +95,7 @@ class TestUiDatabaseTransactions:
             vote_count += 1
         assert v_set.count() == vote_count
 
+    @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_single(self):
         session, communicator = await self.authenticate(False)
@@ -95,6 +109,7 @@ class TestUiDatabaseTransactions:
         assert primary_dict_list  # checks the list has an entry
         assert "primary" == primary_dict_list[0]['type']
 
+    @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_proxy(self):
         session, communicator = await self.authenticate(True)
@@ -135,6 +150,7 @@ class TestUiDatabaseTransactions:
                                                                      "vote_id": v2.id})
         await self.check_votes(Vote.objects.filter(pk=v2.id), communicator)
 
+    @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_with_open_votes(self):
         v = Vote(name='y n a test', token_set=self.ts, method=Vote.YES_NO_ABS, state=Vote.LIVE)
@@ -148,6 +164,7 @@ class TestUiDatabaseTransactions:
                                          'session_token': str(session.id)})
         await self.check_votes(Vote.objects.filter(state=Vote.LIVE, token_set=self.ts), communicator)
 
+    @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_invalid_session(self):
         assert False
@@ -159,6 +176,7 @@ class TestUiDatabaseTransactions:
         response = await communicator.receive_json_from()
         assert response['result'] == "failure"
 
+    @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_old_token(self):
         _, communicator = await self.authenticate(False)
