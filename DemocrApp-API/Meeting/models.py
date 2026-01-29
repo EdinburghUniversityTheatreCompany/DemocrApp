@@ -70,14 +70,14 @@ class AuthToken(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            super(AuthToken, self).save(args, kwargs)
+            super(AuthToken, self).save(*args, **kwargs)
             vt = VoterToken(auth_token_id=self.pk)
             vt.save()
             if self.has_proxy:
                 vt = VoterToken(auth_token_id=self.pk, proxy=True)
                 vt.save()
         else:
-            super(AuthToken, self).save(args, kwargs)
+            super(AuthToken, self).save(*args, **kwargs)
 
 
 class Session(models.Model):
