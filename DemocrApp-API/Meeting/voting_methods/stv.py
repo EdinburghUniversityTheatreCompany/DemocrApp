@@ -1,4 +1,3 @@
-import _thread
 import logging
 from queue import Queue
 from threading import Thread
@@ -20,7 +19,8 @@ class STV(VoteMethod):
         vote = Vote.objects.get(pk=vote_id)
         seats = kwargs.get("num_seats", 1)
         assert vote.method == Vote.STV
-        _thread.start_new_thread(cls._count, (vote_id, seats))
+        count_thread = Thread(target=cls._count, args=(vote_id, seats), daemon=True)
+        count_thread.start()
 
     @classmethod
     def _count(cls, vote_id, seats):
