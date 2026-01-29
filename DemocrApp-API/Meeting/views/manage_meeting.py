@@ -31,15 +31,31 @@ def manage_meeting(request, meeting_id):
 def close_meeting(request, meeting_id):
     if request.method == "POST":
         meeting = get_object_or_404(Meeting, pk=meeting_id)
+
+        # Check all LIVE votes have required fields set
+        votes_missing_fields = []
         for t_set in meeting.tokenset_set.all():
             for vote in t_set.vote_set.filter(state=Vote.LIVE):
-                try:
-                    vote.close()
-                except ValueError:
-                    # Vote doesn't have required fields set, skip it
-                    pass
+                if vote.method == Vote.YES_NO_ABS and not vote.majority_threshold:
+                    votes_missing_fields.append(f"{vote.name} (needs majority threshold)")
+                elif vote.method == Vote.STV and not vote.num_seats:
+                    votes_missing_fields.append(f"{vote.name} (needs number of seats)")
+
+        # If any votes are missing required fields, return error
+        if votes_missing_fields:
+            return JsonResponse({
+                "result": "failure",
+                "reason": "Some votes are missing required fields",
+                "votes": votes_missing_fields
+            }, status=400)
+
+        # All votes have required fields, proceed with closing
+        for t_set in meeting.tokenset_set.all():
+            for vote in t_set.vote_set.filter(state=Vote.LIVE):
+                vote.close()
             for vote in t_set.vote_set.filter(state=Vote.READY):
                 vote.delete()
+
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(meeting.channel_group_name(),
                                                 {"type": "announcement",

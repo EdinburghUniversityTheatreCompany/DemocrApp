@@ -345,7 +345,7 @@ class ManagementInterfaceCases(BaseTestCase):
                 assert token.active
 
     def test_close_meeting(self):
-        v1 = self.ts.vote_set.create(method=Vote.YES_NO_ABS, state=Vote.LIVE)
+        v1 = self.ts.vote_set.create(method=Vote.YES_NO_ABS, state=Vote.LIVE, majority_threshold='simple')
         v2 = self.ts.vote_set.create(method=Vote.YES_NO_ABS, state=Vote.READY)
         before = timezone.now()
         out = self.client.post(reverse('meeting/close', args=[self.m.pk]))
