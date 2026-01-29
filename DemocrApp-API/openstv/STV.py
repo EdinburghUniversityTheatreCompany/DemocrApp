@@ -811,7 +811,8 @@ class STV(Iterative):
 
     if len(self.winners) == self.numSeats:
       # All others are losers
-      self.newLosers(list(self.continuing))
+      if self.continuing:
+        self.newLosers(list(self.continuing))
 
     else:
       # Candidates with no votes are losers
