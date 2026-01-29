@@ -370,7 +370,7 @@
     }
 
     function show_edit_modal(ballot_name, data) {
-        $('#ballotName').text(ballot_name + ' (' + data.candidates.length + ' candidates)');
+        $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
         $('#ballotState').text('Status: ' + data.state);
         render_candidates(data.candidates, data.method);
         $('#candidateError').hide();
@@ -406,7 +406,7 @@
     }
 
     function show_view_only_modal(ballot_name, data) {
-        $('#ballotName').text(ballot_name + ' (' + data.candidates.length + ' candidates)');
+        $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
         $('#ballotState').text('Status: ' + data.state);
         render_candidates(data.candidates, data.method);
         $('#candidateError').hide();

@@ -45,7 +45,7 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <a href="{% url 'meeting/report/vote' meeting.id vote.id %}" class="text-decoration-none">
-                {{ vote.name }}
+                {{ vote.name | safe }}
             </a>
         </h5>
         <div>
