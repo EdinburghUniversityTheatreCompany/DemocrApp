@@ -52,11 +52,19 @@ def update_vote_field(request, meeting_id, vote_id):
         logger.error("Vote does not belong to meeting")
         return JsonResponse({"result": "failure", "reason": "Vote does not belong to meeting"})
 
-    if vote.state not in [Vote.READY, Vote.LIVE]:
-        logger.error(f"Vote not in READY or LIVE state: {vote.state}")
-        return JsonResponse({"result": "failure", "reason": f"Vote must be in READY or LIVE state (current: {vote.state})"})
-
     if request.method == 'POST':
+        # Handle hide_from_public_report (can be edited in any state, including closed)
+        if 'hide_from_public_report' in request.POST:
+            logger.info(f"Updating hide_from_public_report to {request.POST['hide_from_public_report']}")
+            vote.hide_from_public_report = request.POST['hide_from_public_report'].lower() in ['true', '1', 'yes']
+            vote.save()
+            logger.info("Successfully updated hide_from_public_report")
+            return JsonResponse({"result": "success"})
+
+        # Other fields require READY or LIVE state
+        if vote.state not in [Vote.READY, Vote.LIVE]:
+            logger.error(f"Vote not in READY or LIVE state: {vote.state}")
+            return JsonResponse({"result": "failure", "reason": f"Vote must be in READY or LIVE state (current: {vote.state})"})
         # Update majority_threshold for YNA votes
         if 'majority_threshold' in request.POST:
             logger.info(f"Updating majority_threshold to {request.POST['majority_threshold']}")

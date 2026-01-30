@@ -150,7 +150,8 @@ def get_ballot_candidates(request, meeting_id, vote_id):
         "state": vote.state,
         "method": vote.method,
         "candidates": candidates_list,
-        "results": vote.results
+        "results": vote.results,
+        "hide_from_public_report": vote.hide_from_public_report
     }
 
     # Add vote parameters if set

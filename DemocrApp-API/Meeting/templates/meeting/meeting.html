@@ -84,11 +84,22 @@
         <h6>Current Candidates</h6>
         <ul id="candidatesList" class="list-group mb-3"></ul>
 
-        <div id="addCandidateSection">
+        <div id="addCandidateSection" class="mb-3">
           <h6>Add New Candidate</h6>
           <div class="input-group">
             <input type="text" class="form-control" id="newCandidateName" placeholder="Candidate name" maxlength="100">
             <button class="btn btn-primary" type="button" id="addCandidateBtn" onclick="add_candidate()">Add</button>
+          </div>
+        </div>
+
+        <!-- Public Report Visibility (always shown) -->
+        <div>
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="hideFromPublicReport" onchange="toggle_public_visibility()">
+            <label class="form-check-label" for="hideFromPublicReport">
+              Hide from public reports
+            </label>
+            <small class="form-text text-muted d-block">When checked, this vote will not appear in public meeting reports</small>
           </div>
         </div>
       </div>
@@ -416,9 +427,7 @@
             .then(response => response.json())
             .then(data => {
                 // Check vote state to determine which modal to show
-                if (data.state === 'CL') {  // CLOSED state
-                    show_report_modal(ballot_name, data);
-                } else if (data.state === 'RE' || data.state === 'LI') {  // READY or LIVE state
+                if (data.state === 'CL' || data.state === 'RE' || data.state === 'LI') {  // CLOSED, READY or LIVE state
                     show_edit_modal(ballot_name, data);
                 } else {
                     // For other states (COUNTING, NEEDS_TIE_BREAKER), show view-only
@@ -469,9 +478,12 @@
                 $('#numSeatsSection').hide();
             }
         } else {
-            // Hide vote parameters section for non-READY votes
+            // Hide vote parameters section for non-READY/LIVE votes
             $('#voteParametersSection').hide();
         }
+
+        // Set public visibility checkbox (works for all states)
+        $('#hideFromPublicReport').prop('checked', data.hide_from_public_report || false);
 
         var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
         modal.show();
@@ -499,6 +511,10 @@
         $('#newCandidateName').prop('disabled', true);
         $('#newCandidateName').hide();
         $('#addCandidateBtn').hide();
+
+        // Set public visibility checkbox
+        $('#hideFromPublicReport').prop('checked', data.hide_from_public_report || false);
+
         var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
         modal.show();
     }
@@ -627,6 +643,46 @@
                 console.error('Error fetching candidates:', error);
                 show_error('Error updating candidates');
             });
+    }
+
+    function toggle_public_visibility() {
+        var hideFromPublic = $('#hideFromPublicReport').is(':checked');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+
+        $.ajax({
+            type: 'POST',
+            url: '/api/manage/' + currentMeetingId + '/' + currentBallotId + '/update_field',
+            data: { hide_from_public_report: hideFromPublic },
+            dataType: 'json',
+            success: function(response) {
+                if (response.result === 'success') {
+                    $('#candidateError').removeClass('alert-danger').addClass('alert-success')
+                        .text(hideFromPublic ? 'Vote hidden from public reports' : 'Vote visible in public reports')
+                        .show();
+                    setTimeout(function() {
+                        $('#candidateError').hide().removeClass('alert-success').addClass('alert-danger');
+                    }, 3000);
+                } else {
+                    show_error('Failed to update: ' + (response.reason || 'Unknown error'));
+                    // Revert checkbox on error
+                    $('#hideFromPublicReport').prop('checked', !hideFromPublic);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error updating visibility:', status, error);
+                console.error('Response:', xhr.responseText);
+                show_error('Error updating visibility. Check console for details.');
+                // Revert checkbox on error
+                $('#hideFromPublicReport').prop('checked', !hideFromPublic);
+            }
+        });
     }
 
     function show_error(message) {
