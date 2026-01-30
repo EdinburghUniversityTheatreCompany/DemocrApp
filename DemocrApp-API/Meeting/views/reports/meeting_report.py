@@ -1,9 +1,12 @@
 import yaml
+from django.contrib.auth.decorators import login_required, permission_required
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404
 from ...models import Meeting, Vote
 
 
+@login_required(login_url='/api/admin/login')
+@permission_required('Meeting.add_meeting', raise_exception=True)
 def meeting_report(request, meeting_id):
     context = {}
     meeting = get_object_or_404(Meeting, pk=meeting_id)
@@ -50,6 +53,8 @@ def _build_meeting_data(meeting):
     }
 
 
+@login_required(login_url='/api/admin/login')
+@permission_required('Meeting.add_meeting', raise_exception=True)
 def meeting_report_json(request, meeting_id):
     meeting = get_object_or_404(Meeting, pk=meeting_id)
     data = _build_meeting_data(meeting)
@@ -58,6 +63,8 @@ def meeting_report_json(request, meeting_id):
     return response
 
 
+@login_required(login_url='/api/admin/login')
+@permission_required('Meeting.add_meeting', raise_exception=True)
 def meeting_report_yaml(request, meeting_id):
     meeting = get_object_or_404(Meeting, pk=meeting_id)
     data = _build_meeting_data(meeting)
