@@ -24,7 +24,7 @@
                 <i class="fa fa-download"></i> YAML
             </a>
             {% if token_sets %}
-            <a href="{% url 'meeting/public_meeting_report' token_sets.0.id %}" class="btn btn-outline-primary btn-sm" target="_blank">
+            <a href="{% url 'meeting/public_meeting_report' token_sets.0.public_id %}" class="btn btn-outline-primary btn-sm" target="_blank">
                 <i class="fa fa-share-alt"></i> Public Report
             </a>
             {% endif %}

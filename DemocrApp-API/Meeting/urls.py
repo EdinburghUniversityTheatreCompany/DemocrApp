@@ -27,7 +27,7 @@ urlpatterns = [
     path('reports/<int:meeting_id>.yaml', reports.meeting_report_yaml, name='meeting/report/meeting/yaml'),
     path('reports/<int:meeting_id>/<int:vote_id>', reports.vote_report, name='meeting/report/vote'),
     path('public/vote/<uuid:public_id>/', reports.public_reports.public_vote_report, name='meeting/public_vote_report'),
-    path('public/meeting/<int:token_set_id>/', reports.public_reports.public_meeting_report, name='meeting/public_meeting_report'),
+    path('public/meeting/<uuid:public_id>/', reports.public_reports.public_meeting_report, name='meeting/public_meeting_report'),
     path('list', views.meeting_list, name='meeting/list'),
     path('kiosk_redirect', views.kiosk_redirect, name='meeting/kiosk_redirect')
 ]

@@ -18,9 +18,9 @@ def public_vote_report(request, public_id):
     return render(request, 'meeting/public_vote_report.html', context)
 
 
-def public_meeting_report(request, token_set_id):
+def public_meeting_report(request, public_id):
     """Public view of meeting with summary + all vote details"""
-    token_set = get_object_or_404(TokenSet, id=token_set_id)
+    token_set = get_object_or_404(TokenSet, public_id=public_id)
     votes = token_set.vote_set.filter(
         state=Vote.CLOSED,
         hide_from_public_report=False

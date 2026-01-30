@@ -67,7 +67,7 @@ class PublicVoteReportTests(PublicReportTestCase):
 class PublicMeetingReportTests(PublicReportTestCase):
     def test_public_meeting_report_accessible(self):
         """Test that meeting reports are accessible"""
-        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.id]))
+        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.public_id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test Meeting")
 
@@ -90,7 +90,7 @@ class PublicMeetingReportTests(PublicReportTestCase):
             hide_from_public_report=True
         )
 
-        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.id]))
+        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.public_id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Visible Vote")
         self.assertNotContains(response, "Hidden Vote")
@@ -114,7 +114,7 @@ class PublicMeetingReportTests(PublicReportTestCase):
         }
         vote.save()
 
-        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.id]))
+        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.public_id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PASSED")
         self.assertContains(response, "70%")
@@ -139,9 +139,15 @@ class PublicMeetingReportTests(PublicReportTestCase):
         }
         vote.save()
 
-        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.id]))
+        response = self.client.get(reverse('meeting/public_meeting_report', args=[self.token_set.public_id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Alice, Bob, Carol (3)")
+
+    def test_public_meeting_report_not_accessible_by_integer_id(self):
+        """Test that integer IDs don't work - only UUIDs"""
+        # Try to access via integer ID (should 404 after URL pattern change)
+        response = self.client.get(f'/api/public/meeting/{self.token_set.id}/')
+        self.assertEqual(response.status_code, 404)
 
 
 class VoteFieldTests(PublicReportTestCase):

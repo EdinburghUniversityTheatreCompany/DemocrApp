@@ -44,6 +44,12 @@ class Meeting(models.Model):
 class TokenSet(models.Model):
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    public_id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        help_text="Public identifier for shareable meeting reports"
+    )
 
     def valid(self):
         return self == self.meeting.tokenset_set.latest('created_at') and self.meeting.open()
