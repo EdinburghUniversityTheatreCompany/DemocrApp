@@ -3,17 +3,6 @@
 {% block title %}{{ meeting.name }} Report{% endblock %}
 
 {% block content %}
-{% if token_sets %}
-<div class="alert alert-info no-print mb-3">
-    <i class="fa fa-share-alt"></i> <strong>Public Meeting Report:</strong>
-    <a href="{% url 'meeting/public_meeting_report' token_sets.0.id %}" target="_blank">
-        {{ request.scheme }}://{{ request.get_host }}{% url 'meeting/public_meeting_report' token_sets.0.id %}
-    </a>
-    <button class="btn btn-sm btn-outline-primary float-end" onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'meeting/public_meeting_report' token_sets.0.id %}')">
-        <i class="fa fa-copy"></i> Copy Link
-    </button>
-</div>
-{% endif %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -33,6 +22,11 @@
             <a href="{% url 'meeting/report/meeting/yaml' meeting.id %}" class="btn btn-outline-primary btn-sm">
                 <i class="fa fa-download"></i> YAML
             </a>
+            {% if token_sets %}
+            <a href="{% url 'meeting/public_meeting_report' token_sets.0.id %}" class="btn btn-outline-primary btn-sm" target="_blank">
+                <i class="fa fa-share-alt"></i> Public Report
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>
