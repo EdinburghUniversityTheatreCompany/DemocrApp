@@ -15,7 +15,7 @@ def public_vote_report(request, public_id):
         'ballots': anonymized_ballots,
         'is_public': True,
     }
-    return render(request, 'Meeting/public_vote_report.html', context)
+    return render(request, 'meeting/public_vote_report.html', context)
 
 
 def public_meeting_report(request, token_set_id):
@@ -42,7 +42,7 @@ def public_meeting_report(request, token_set_id):
         'votes': votes,
         'is_public': True,
     }
-    return render(request, 'Meeting/public_meeting_report.html', context)
+    return render(request, 'meeting/public_meeting_report.html', context)
 
 
 def _anonymize_ballots(vote):
