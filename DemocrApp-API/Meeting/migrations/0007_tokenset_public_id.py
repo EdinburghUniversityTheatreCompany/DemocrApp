@@ -4,6 +4,19 @@ import uuid
 from django.db import migrations, models
 
 
+def generate_public_ids(apps, schema_editor):
+    """Generate unique UUIDs for all existing TokenSet records."""
+    TokenSet = apps.get_model('Meeting', 'TokenSet')
+    for tokenset in TokenSet.objects.all():
+        tokenset.public_id = uuid.uuid4()
+        tokenset.save(update_fields=['public_id'])
+
+
+def reverse_public_ids(apps, schema_editor):
+    """No-op reverse migration."""
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,9 +24,27 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Step 1: Add field as nullable, non-unique
         migrations.AddField(
             model_name='tokenset',
             name='public_id',
-            field=models.UUIDField(default=uuid.uuid4, editable=False, help_text='Public identifier for shareable meeting reports', unique=True),
+            field=models.UUIDField(
+                null=True,
+                editable=False,
+                help_text='Public identifier for shareable meeting reports'
+            ),
+        ),
+        # Step 2: Populate UUIDs for existing records
+        migrations.RunPython(generate_public_ids, reverse_public_ids),
+        # Step 3: Make field non-nullable and unique
+        migrations.AlterField(
+            model_name='tokenset',
+            name='public_id',
+            field=models.UUIDField(
+                default=uuid.uuid4,
+                editable=False,
+                unique=True,
+                help_text='Public identifier for shareable meeting reports'
+            ),
         ),
     ]
