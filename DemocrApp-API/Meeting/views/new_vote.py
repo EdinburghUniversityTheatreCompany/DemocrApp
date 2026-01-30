@@ -19,6 +19,15 @@ def new_vote(request, meeting_id):
                         description=data['description'],
                         method=data['method'],
                         token_set=token_sets.latest())
+
+            # Set majority_threshold for YNA votes
+            if data.get('majority_threshold'):
+                vote.majority_threshold = data['majority_threshold']
+
+            # Set num_seats for STV votes
+            if data.get('num_seats'):
+                vote.num_seats = int(data['num_seats'])
+
             vote.save()
             pass
     return HttpResponseRedirect(reverse('meeting/manage', args=[meeting_id]))

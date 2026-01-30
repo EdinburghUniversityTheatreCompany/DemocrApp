@@ -144,11 +144,19 @@ def get_ballot_candidates(request, meeting_id, vote_id):
     candidates = Option.objects.filter(vote=vote).values('id', 'name')
     candidates_list = list(candidates)
 
-    return JsonResponse({
+    response_data = {
         "ballot_id": vote.id,
         "ballot_name": vote.name,
         "state": vote.state,
         "method": vote.method,
         "candidates": candidates_list,
         "results": vote.results
-    })
+    }
+
+    # Add vote parameters if set
+    if vote.majority_threshold:
+        response_data["majority_threshold"] = vote.majority_threshold
+    if vote.num_seats:
+        response_data["num_seats"] = vote.num_seats
+
+    return JsonResponse(response_data)

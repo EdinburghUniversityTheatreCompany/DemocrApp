@@ -13,6 +13,16 @@ def close_vote(request, meeting_id, vote_id):
     vote = get_object_or_404(Vote, pk=vote_id)
     if vote.token_set.meeting != meeting or vote.state != vote.LIVE:
         return JsonResponse({'result': 'failure'}, status=401)
+
+    # Handle POST data for setting num_seats or majority_threshold before closing
+    if request.method == 'POST':
+        if 'num_seats' in request.POST:
+            vote.num_seats = int(request.POST['num_seats'])
+            vote.save()
+        if 'majority_threshold' in request.POST:
+            vote.majority_threshold = request.POST['majority_threshold']
+            vote.save()
+
     try:
         vote.close()
     except ValueError as e:
@@ -29,3 +39,13 @@ def close_vote_stv(request, meeting_id, vote_id):
     context['vote'] = vote
     context['meeting'] = meeting
     return render(request, 'meeting/close_stv.html', context)
+
+@login_required(login_url='/api/admin/login')
+@permission_required('Meeting.add_meeting')
+def close_vote_yna(request, meeting_id, vote_id):
+    context = {}
+    vote = get_object_or_404(Vote, pk=vote_id)
+    meeting = get_object_or_404(Meeting, pk=meeting_id)
+    context['vote'] = vote
+    context['meeting'] = meeting
+    return render(request, 'meeting/close_yna.html', context)

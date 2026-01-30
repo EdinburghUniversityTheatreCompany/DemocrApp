@@ -1,0 +1,28 @@
+{% extends 'meeting/_base.html' %}
+
+{% load vote_helpers %}
+
+{% block content %}
+
+<h1>{{ vote.name }}</h1>
+
+<div class="card">
+  <h5 class="card-header">What is the majority threshold for this vote?</h5>
+  <div class="col-md-6">
+          <form action="{% url 'meeting/close_vote' meeting.id vote.id %}" method="post">
+                {% csrf_token %}
+                <div class="form-group m-1">
+                    <select id="majority_threshold" name="majority_threshold" class="form-control" required>
+                        <option value="">-- please select --</option>
+                        <option value="simple">Simple Majority</option>
+                        <option value="two_thirds">Two-Thirds Majority</option>
+                    </select>
+                    <small class="form-text text-muted">Determines pass/fail for this vote</small>
+                    <br>
+                    <input type="submit" value="Submit" class="btn btn-primary m-1 align-right" >
+                </div>
+          </form>
+  </div>
+</div>
+
+{% endblock %}

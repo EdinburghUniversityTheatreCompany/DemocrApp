@@ -9,6 +9,43 @@
     --------------------------------
     {{ vote.results | safe }}
 
+    {% if vote.state == vote.READY or vote.state == vote.LIVE %}
+        <!-- Edit vote parameters for READY/LIVE state -->
+        {% if vote.method == vote.YES_NO_ABS %}
+            <div class="card mb-3">
+                <h5 class="card-header">Majority Threshold</h5>
+                <div class="card-body">
+                    <form id="update_threshold_form">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <select id="majority_threshold" name="majority_threshold" class="form-control">
+                                <option value="">-- please select --</option>
+                                <option value="simple" {% if vote.majority_threshold == 'simple' %}selected{% endif %}>Simple Majority</option>
+                                <option value="two_thirds" {% if vote.majority_threshold == 'two_thirds' %}selected{% endif %}>Two-Thirds Majority</option>
+                            </select>
+                            <small class="form-text text-muted">Determines pass/fail for this vote</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary mt-2" onclick="update_vote_field('majority_threshold')">Update</button>
+                    </form>
+                </div>
+            </div>
+        {% elif vote.method == vote.STV %}
+            <div class="card mb-3">
+                <h5 class="card-header">Number of Seats</h5>
+                <div class="card-body">
+                    <form id="update_seats_form">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <input type="number" id="num_seats" name="num_seats" class="form-control" min="1" value="{{ vote.num_seats|default:'' }}">
+                            <small class="form-text text-muted">Number of positions to elect</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary mt-2" onclick="update_vote_field('num_seats')">Update</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+
     {% if vote.method != vote.YES_NO_ABS and vote.state == vote.READY %}
         <ul id="option_list">
             {% for option in vote.option_set.all %}
@@ -25,6 +62,11 @@
 {% block footerscripts %}
     <script src="/static/js/ballot-management.js"></script>
     <script>
+        var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
+        function csrfSafeMethod(method) {
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        }
+
         function add_option() {
             var new_option = $('#additional_option_textbox').val();
             add_candidate_ajax(new_option, {{ meeting.id }}, {{ vote.id }}, function(data) {
@@ -36,6 +78,45 @@
         function remove_option(target) {
             remove_candidate_ajax(target, {{ meeting.id }}, {{ vote.id }}, function(data) {
                 $('#' + target).remove();
+            });
+        }
+
+        function update_vote_field(field_name) {
+            var value = $('#' + field_name).val();
+            if (!value) {
+                alert('Please select/enter a value');
+                return;
+            }
+
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+
+            var data = {};
+            data[field_name] = value;
+
+            $.ajax({
+                type: 'POST',
+                url: '/api/manage/{{ meeting.id }}/{{ vote.id }}/update_field',
+                data: data,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.result === 'success') {
+                        alert('Updated successfully');
+                    } else {
+                        alert('Failed to update: ' + (response.reason || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error updating field:', status, error);
+                    console.error('Response:', xhr.responseText);
+                    console.error('Status code:', xhr.status);
+                    alert('Error updating field. Check console for details.');
+                }
             });
         }
     </script>

@@ -54,15 +54,43 @@
           <p id="ballotState" class="text-muted"></p>
         </div>
 
+        <div id="candidateError" class="alert alert-danger mt-2" style="display: none;"></div>
+
+        <!-- Vote Parameters Section -->
+        <div id="voteParametersSection" style="display: none;">
+          <h6>Vote Parameters</h6>
+
+          <!-- Majority Threshold for YNA votes -->
+          <div id="majorityThresholdSection" style="display: none;" class="mb-3">
+            <label for="modalMajorityThreshold">Majority Threshold:</label>
+            <select id="modalMajorityThreshold" class="form-control">
+              <option value="">-- please select --</option>
+              <option value="simple">Simple Majority</option>
+              <option value="two_thirds">Two-Thirds Majority</option>
+            </select>
+            <small class="form-text text-muted">Determines pass/fail for this vote</small>
+            <button class="btn btn-sm btn-primary mt-2" onclick="update_modal_field('majority_threshold')">Update</button>
+          </div>
+
+          <!-- Number of Seats for STV votes -->
+          <div id="numSeatsSection" style="display: none;" class="mb-3">
+            <label for="modalNumSeats">Number of Seats:</label>
+            <input type="number" id="modalNumSeats" class="form-control" min="1">
+            <small class="form-text text-muted">Number of positions to elect</small>
+            <button class="btn btn-sm btn-primary mt-2" onclick="update_modal_field('num_seats')">Update</button>
+          </div>
+        </div>
+
         <h6>Current Candidates</h6>
         <ul id="candidatesList" class="list-group mb-3"></ul>
 
-        <h6>Add New Candidate</h6>
-        <div class="input-group">
-          <input type="text" class="form-control" id="newCandidateName" placeholder="Candidate name" maxlength="100">
-          <button class="btn btn-primary" type="button" id="addCandidateBtn" onclick="add_candidate()">Add</button>
+        <div id="addCandidateSection">
+          <h6>Add New Candidate</h6>
+          <div class="input-group">
+            <input type="text" class="form-control" id="newCandidateName" placeholder="Candidate name" maxlength="100">
+            <button class="btn btn-primary" type="button" id="addCandidateBtn" onclick="add_candidate()">Add</button>
+          </div>
         </div>
-        <div id="candidateError" class="alert alert-danger mt-2" style="display: none;"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -124,12 +152,28 @@
           <div class="form-group m-1">
             {{ form.method.label_tag }}
             {{ form.method.errors }}
-            <select name="{{ form.method.html_name }}" id="{{ form.method.id_for_label }}" class="form-control">
+            <select name="{{ form.method.html_name }}" id="{{ form.method.id_for_label }}" class="form-control" onchange="toggleVoteFields()">
               <option value="" selected>-- please select --</option>
               {% for x,y in form.method.field.choices %}
                   <option value="{{ x }}">{{ y }}</option>
               {% endfor %}
             </select>
+          </div>
+          <div class="form-group m-1" id="majority_threshold_field" style="display: none;">
+            {{ form.majority_threshold.label_tag }}
+            {{ form.majority_threshold.errors }}
+            <select name="{{ form.majority_threshold.html_name }}" id="{{ form.majority_threshold.id_for_label }}" class="form-control">
+              <option value="">-- please select --</option>
+              <option value="simple">Simple Majority</option>
+              <option value="two_thirds">Two-Thirds Majority</option>
+            </select>
+            <small class="form-text text-muted">Determines pass/fail for YNA votes</small>
+          </div>
+          <div class="form-group m-1" id="num_seats_field" style="display: none;">
+            {{ form.num_seats.label_tag }}
+            {{ form.num_seats.errors }}
+            <input type="number" name="{{ form.num_seats.html_name }}" id="{{ form.num_seats.id_for_label }}" class="form-control" min="1">
+            <small class="form-text text-muted">Number of positions to elect for STV votes</small>
           </div>
         </div>
         <div class="col-md-6">
@@ -344,6 +388,24 @@
         }
     }
 
+    function toggleVoteFields() {
+        var method = $('#{{ form.method.id_for_label }}').val();
+        var majorityField = $('#majority_threshold_field');
+        var numSeatsField = $('#num_seats_field');
+
+        // Show/hide based on method
+        if (method === 'YNA') {
+            majorityField.show();
+            numSeatsField.hide();
+        } else if (method === 'STV') {
+            majorityField.hide();
+            numSeatsField.show();
+        } else {
+            majorityField.hide();
+            numSeatsField.hide();
+        }
+    }
+
     // Modal interaction functions
     var currentMeetingId = {{ meeting.id }};
     var currentBallotId = null;
@@ -356,10 +418,10 @@
                 // Check vote state to determine which modal to show
                 if (data.state === 'CL') {  // CLOSED state
                     show_report_modal(ballot_name, data);
-                } else if (data.state === 'RE') {  // READY state
+                } else if (data.state === 'RE' || data.state === 'LI') {  // READY or LIVE state
                     show_edit_modal(ballot_name, data);
                 } else {
-                    // For other states (LIVE, COUNTING, NEEDS_TIE_BREAKER), show view-only
+                    // For other states (COUNTING, NEEDS_TIE_BREAKER), show view-only
                     show_view_only_modal(ballot_name, data);
                 }
             })
@@ -372,24 +434,45 @@
     function show_edit_modal(ballot_name, data) {
         $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
         $('#ballotState').text('Status: ' + data.state);
-        render_candidates(data.candidates, data.method);
+        render_candidates(data.candidates, data.method, data.state);
         $('#candidateError').hide();
         $('#newCandidateName').val('');
 
-        // For YES_NO_ABS votes, hide the add form since options are fixed
-        if (data.method === 'YNA') {
-            $('#candidateError').text('These options are fixed for Yes/No/Abstain votes.').show();
-            $('#addCandidateBtn').prop('disabled', true);
-            $('#newCandidateName').prop('disabled', true);
-            $('#newCandidateName').hide();
-            $('#addCandidateBtn').hide();
+        // Show vote parameters section for READY and LIVE votes
+        if (data.state === 'RE' || data.state === 'LI') {
+            $('#voteParametersSection').show();
+
+            // For YES_NO_ABS votes, show majority threshold and hide candidate editing
+            if (data.method === 'YNA') {
+                $('#majorityThresholdSection').show();
+                $('#numSeatsSection').hide();
+                $('#modalMajorityThreshold').val(data.majority_threshold || '');
+                $('#addCandidateSection').hide();
+                $('#candidateError').hide();
+            } else if (data.method === 'STV') {
+                // For STV votes, show num_seats
+                $('#majorityThresholdSection').hide();
+                $('#numSeatsSection').show();
+                $('#modalNumSeats').val(data.num_seats || '');
+
+                // Only allow candidate editing in READY state
+                if (data.state === 'RE') {
+                    $('#addCandidateSection').show();
+                    $('#candidateError').hide();
+                } else {
+                    // LIVE state - hide candidate editing
+                    $('#addCandidateSection').hide();
+                    $('#candidateError').hide();
+                }
+            } else {
+                $('#majorityThresholdSection').hide();
+                $('#numSeatsSection').hide();
+            }
         } else {
-            // For STV votes, enable inputs for editing
-            $('#addCandidateBtn').prop('disabled', false);
-            $('#newCandidateName').prop('disabled', false);
-            $('#newCandidateName').show();
-            $('#addCandidateBtn').show();
+            // Hide vote parameters section for non-READY votes
+            $('#voteParametersSection').hide();
         }
+
         var modal = new bootstrap.Modal(document.getElementById('editCandidatesModal'));
         modal.show();
     }
@@ -408,7 +491,7 @@
     function show_view_only_modal(ballot_name, data) {
         $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
         $('#ballotState').text('Status: ' + data.state);
-        render_candidates(data.candidates, data.method);
+        render_candidates(data.candidates, data.method, data.state);
         $('#candidateError').hide();
         $('#newCandidateName').val('');
         // Disable the add button and input for view-only mode
@@ -420,12 +503,13 @@
         modal.show();
     }
 
-    function render_candidates(candidates, method) {
+    function render_candidates(candidates, method, state) {
         var list = $('#candidatesList');
         list.empty();
         candidates.forEach(function(candidate) {
             var isNoneOfTheAbove = candidate.name === 'None of the above';
             var isYNA = method === 'YNA';
+            var isReady = state === 'RE';
 
             var removeBtn;
             if (isYNA) {
@@ -434,9 +518,12 @@
             } else if (isNoneOfTheAbove) {
                 // For STV, "None of the above" is required
                 removeBtn = '<span class="badge bg-secondary ms-2">Required</span>';
-            } else {
-                // For STV, other candidates can be removed
+            } else if (isReady) {
+                // For STV in READY state, other candidates can be removed
                 removeBtn = '<button class="btn btn-sm btn-danger ms-2" onclick="remove_candidate(' + candidate.id + ')">Remove</button>';
+            } else {
+                // For STV in LIVE state, show fixed badge
+                removeBtn = '<span class="badge bg-secondary ms-2">Fixed</span>';
             }
 
             var listItem = '<li class="list-group-item d-flex justify-content-between align-items-center">' +
@@ -533,7 +620,7 @@
         fetch('/api/manage/' + currentMeetingId + '/' + currentBallotId + '/candidates.json')
             .then(response => response.json())
             .then(data => {
-                render_candidates(data.candidates, data.method);
+                render_candidates(data.candidates, data.method, data.state);
                 $('#ballotName').text(data.ballot_name + ' (' + data.candidates.length + ' candidates)');
             })
             .catch(error => {
@@ -544,6 +631,54 @@
 
     function show_error(message) {
         $('#candidateError').text(message).show();
+    }
+
+    function update_modal_field(field_name) {
+        var value;
+        if (field_name === 'majority_threshold') {
+            value = $('#modalMajorityThreshold').val();
+        } else if (field_name === 'num_seats') {
+            value = $('#modalNumSeats').val();
+        }
+
+        if (!value) {
+            show_error('Please select/enter a value');
+            return;
+        }
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+
+        var data = {};
+        data[field_name] = value;
+
+        $.ajax({
+            type: 'POST',
+            url: '/api/manage/' + currentMeetingId + '/' + currentBallotId + '/update_field',
+            data: data,
+            dataType: 'json',
+            success: function(response) {
+                if (response.result === 'success') {
+                    $('#candidateError').removeClass('alert-danger').addClass('alert-success').text('Updated successfully').show();
+                    setTimeout(function() {
+                        $('#candidateError').hide().removeClass('alert-success').addClass('alert-danger');
+                    }, 3000);
+                } else {
+                    show_error('Failed to update: ' + (response.reason || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error updating field:', status, error);
+                console.error('Response:', xhr.responseText);
+                console.error('Status code:', xhr.status);
+                show_error('Error updating field. Check console for details.');
+            }
+        });
     }
 
     function edit_ballot_from_error() {
