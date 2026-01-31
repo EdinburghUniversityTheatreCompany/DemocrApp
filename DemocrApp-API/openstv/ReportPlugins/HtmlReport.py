@@ -98,12 +98,92 @@ class HtmlReport(ReportPlugin):
 .stv-results h3 { margin-top: 1em; margin-bottom: 0.5em; }
 .stv-results ul { margin: 0; padding-left: 1.5em; }
 .stv-results .winners-list li { font-weight: bold; }
-.stv-table { border-collapse: collapse; margin-top: 0.5em; }
-.stv-table th, .stv-table td { border: 1px solid #ccc; padding: 4px 8px; text-align: right; }
-.stv-table th { background-color: #f5f5f5; text-align: center; }
-.stv-table td:first-child { text-align: center; }
-.stv-table td:last-child { text-align: left; }
-.stv-table .eliminated-cell { color: #999; text-align: center; }
+
+/* Responsive table wrapper with scroll shadows */
+.stv-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  margin-top: 0.5em;
+  /* Scroll shadow indicators using background gradients */
+  background:
+    linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+    linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+    radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
+  background-repeat: no-repeat;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.stv-table {
+  border-collapse: collapse;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.stv-table th, .stv-table td {
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.stv-table th {
+  background-color: #f5f5f5;
+  text-align: center;
+}
+
+/* Sticky first column (Round) */
+.stv-table th:first-child,
+.stv-table td:first-child {
+  position: sticky;
+  left: 0;
+  background-color: #fff;
+  z-index: 10;
+  text-align: center;
+  border-right: 2px solid #dee2e6;
+}
+
+.stv-table thead th:first-child {
+  background-color: #f5f5f5;
+  z-index: 11;
+}
+
+.stv-table td:last-child {
+  text-align: left;
+}
+
+.stv-table .eliminated-cell {
+  color: #999;
+  text-align: center;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .stv-table th,
+  .stv-table td {
+    padding: 6px;
+    font-size: 0.875rem;
+  }
+
+  .stv-table th:first-child,
+  .stv-table td:first-child {
+    min-width: 60px;
+  }
+}
+
+/* Print styles - remove scroll wrapper effects */
+@media print {
+  .stv-table-wrapper {
+    overflow-x: visible;
+    background: none;
+  }
+
+  .stv-table th:first-child,
+  .stv-table td:first-child {
+    position: static;
+  }
+}
 </style>
 """)
 
@@ -150,6 +230,7 @@ class HtmlReport(ReportPlugin):
         ordered_candidates = self._get_ordered_candidates()
 
         out('<h3>Round Breakdown</h3>\n')
+        out('<div class="stv-table-wrapper">\n')
         out('<table class="stv-table">\n')
 
         # Header row
@@ -184,4 +265,4 @@ class HtmlReport(ReportPlugin):
             out('<td>%s</td>' % action)
             out('</tr>\n')
 
-        out('</table>\n</div>\n')
+        out('</table>\n</div>\n</div>\n')
