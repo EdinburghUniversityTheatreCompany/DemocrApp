@@ -79,11 +79,11 @@ class STV(VoteMethod):
         winners = []
         for i, w in enumerate(electionCounter.winners, start=1):
             winners.append({
-                "name": names[w],
+                "name": electionCounter.b.names[w],
                 "order": i,
                 "round": electionCounter.wonAtRound[w] + 1  # Convert to 1-indexed
             })
-        loser_names = [names[l] for l in electionCounter.losers] if hasattr(electionCounter, 'losers') else []
+        loser_names = [electionCounter.b.names[l] for l in electionCounter.losers] if hasattr(electionCounter, 'losers') else []
 
         vote.results_data = {
             "winners": winners,
@@ -93,7 +93,7 @@ class STV(VoteMethod):
             "rounds": [
                 {
                     "round": round_num + 1,
-                    "counts": {names[c]: float(electionCounter.count[round_num][c]) for c in range(len(names))},
+                    "counts": {electionCounter.b.names[c]: float(electionCounter.count[round_num][c]) for c in range(electionCounter.b.numCandidates)},
                     "exhausted": float(electionCounter.exhausted[round_num]),
                 }
                 for round_num in range(electionCounter.numRounds)
