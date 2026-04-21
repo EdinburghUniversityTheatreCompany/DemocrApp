@@ -39,35 +39,42 @@ class YNA(VoteMethod):
         threshold = vote.majority_threshold
         if threshold == 'simple':
             passed = has_majority
-            threshold_label = 'Simple Majority'
+            threshold_label = "Simple Majority"
         elif threshold == 'two_thirds':
             passed = has_two_thirds
-            threshold_label = 'Two-Thirds Majority'
+            threshold_label = "Two-Thirds Majority (66.67%)"
         else:
             # Legacy votes without threshold set
             passed = None
             threshold_label = None
 
-        # Generate status badge
-        if passed is not None:
-            status_badge = '<span class="badge bg-success">✓ PASSED</span>' if passed else '<span class="badge bg-danger">✗ FAILED</span>'
+        # Choose card styling + header based on outcome
+        if passed is True:
+            card_class = "card border-start border-success border-4"
+            header_class = "card-header bg-success-subtle text-success-emphasis"
+            header_title = "✓ Motion Passed"
+        elif passed is False:
+            card_class = "card border-start border-danger border-4"
+            header_class = "card-header bg-danger-subtle text-danger-emphasis"
+            header_title = "✗ Motion Failed"
         else:
-            status_badge = ''
+            card_class = "card"
+            header_class = "card-header"
+            header_title = "Vote Results"
 
-        # Generate HTML results
-        status_section = ''
-        if threshold_label:
-            status_section = """
-                <hr>
-                <h6>{}</h6>
-                <p class="mb-0 fs-4">{}</p>
-            """.format(threshold_label, status_badge)
+        threshold_line = (
+            '<div class="mt-1">Threshold: {}</div>'.format(threshold_label)
+            if threshold_label else ''
+        )
 
         html_results = """
-        <div class="card">
+        <div class="{card_class}">
+            <div class="{header_class}">
+                <h5 class="mb-0">{header_title}</h5>
+                {threshold_line}
+            </div>
             <div class="card-body">
-                <h5 class="card-title">Vote Results</h5>
-                <table class="table table-sm">
+                <table class="table table-sm mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Option</th>
@@ -78,30 +85,38 @@ class YNA(VoteMethod):
                     <tbody>
                         <tr>
                             <td><strong>Yes</strong></td>
-                            <td><span class="badge bg-success">{}</span></td>
-                            <td>{:.1f}%</td>
+                            <td><span class="badge bg-success">{y}</span></td>
+                            <td>{y_pct:.1f}%</td>
                         </tr>
                         <tr>
                             <td><strong>No</strong></td>
-                            <td><span class="badge bg-danger">{}</span></td>
-                            <td>{:.1f}%</td>
+                            <td><span class="badge bg-danger">{n}</span></td>
+                            <td>{n_pct:.1f}%</td>
                         </tr>
                         <tr>
                             <td><strong>Abstain</strong></td>
-                            <td><span class="badge bg-secondary">{}</span></td>
-                            <td>{:.1f}%</td>
+                            <td><span class="badge bg-secondary">{a}</span></td>
+                            <td>{a_pct:.1f}%</td>
                         </tr>
                         <tr class="table-light">
                             <td><strong>Total</strong></td>
-                            <td><strong>{}</strong></td>
+                            <td><strong>{total}</strong></td>
                             <td><strong>100.0%</strong></td>
                         </tr>
                     </tbody>
                 </table>
-                {}
             </div>
         </div>
-        """.format(y, y_pct, n, n_pct, a, a_pct, total, status_section)
+        """.format(
+            card_class=card_class,
+            header_class=header_class,
+            header_title=header_title,
+            threshold_line=threshold_line,
+            y=y, y_pct=y_pct,
+            n=n, n_pct=n_pct,
+            a=a, a_pct=a_pct,
+            total=total,
+        )
 
         vote.results = html_results
         vote.results_data = {
